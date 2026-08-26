@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRPL Newsletter Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1a1a1a; --paper:#ffffff; --canvas:#ececec; --line:#d9d9d9;
+    --accent:#8c3b23; --accent-ink:#ffffff; --muted:#6b6b6b; --panel:#f7f6f4;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:'DM Sans',Helvetica,Arial,sans-serif;color:var(--ink);background:var(--canvas);display:flex;flex-direction:column}
+
+  /* ---------- top bar ---------- */
+  header.appbar{background:var(--ink);color:#fff;display:flex;align-items:center;gap:14px;padding:10px 16px;flex-wrap:wrap}
+  header.appbar .brand{font-weight:900;letter-spacing:.02em;font-size:15px;white-space:nowrap}
+  header.appbar .brand span{color:#e0a48c;font-weight:400}
+  #nb-title{background:#2b2b2b;border:1px solid #444;color:#fff;border-radius:6px;padding:7px 10px;font-size:13px;font-family:inherit;min-width:200px;flex:1;max-width:340px}
+  .bar-actions{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+  button.tb{background:#2b2b2b;color:#fff;border:1px solid #4a4a4a;border-radius:6px;padding:7px 12px;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap}
+  button.tb:hover{background:#3a3a3a}
+  button.tb.primary{background:var(--accent);border-color:var(--accent)}
+  button.tb.primary:hover{background:#a04a2e}
+  input[type=file]{display:none}
+
+  /* ---------- layout ---------- */
+  main{display:flex;flex:1;min-height:0}
+  aside.left{width:230px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:14px;flex-shrink:0}
+  section.stage{flex:1;overflow-y:auto;padding:28px 20px 80px}
+  aside.right{width:300px;background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:14px;flex-shrink:0}
+  h3.panel{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 10px}
+
+  /* palette */
+  .palette{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px}
+  .palette button{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 6px;font-size:12px;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--ink)}
+  .palette button:hover{border-color:var(--accent);color:var(--accent)}
+  .palette button .ic{font-size:17px;line-height:1}
+
+  /* structure list */
+  #structure{display:flex;flex-direction:column;gap:4px}
+  #structure .srow{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12px;cursor:pointer}
+  #structure .srow.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  #structure .srow .lbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #structure .srow .mini{border:0;background:none;cursor:pointer;font-size:12px;color:var(--muted);padding:2px}
+  #structure .srow .mini:hover{color:var(--accent)}
+
+  /* preview */
+  #email-canvas{margin:0 auto;transition:max-width .2s;max-width:660px;width:100%}
+  #email-canvas.mobile{max-width:375px}
+  .blockwrap{position:relative;cursor:pointer}
+  .blockwrap:hover{outline:2px dashed #b9b9b9;outline-offset:-2px}
+  .blockwrap.sel{outline:2px solid var(--accent);outline-offset:-2px}
+  .blockwrap .ctrl{position:absolute;top:4px;right:4px;display:none;gap:2px;background:rgba(26,26,26,.92);border-radius:6px;padding:2px;z-index:5}
+  .blockwrap:hover .ctrl,.blockwrap.sel .ctrl{display:flex}
+  .ctrl button{background:none;border:0;color:#fff;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:4px}
+  .ctrl button:hover{background:var(--accent)}
+  .empty-note{border:2px dashed var(--line);border-radius:10px;padding:60px 20px;text-align:center;color:var(--muted);background:#fff}
+
+  /* inspector */
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+  .field input[type=text],.field input[type=url],.field input[type=number],.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink)}
+  .field textarea{min-height:110px;resize:vertical;line-height:1.45}
+  .hint{font-size:11px;color:var(--muted);line-height:1.45;margin-top:4px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg button{flex:1;border:0;background:#fff;padding:7px 0;font-size:12px;font-family:inherit;cursor:pointer;color:var(--ink)}
+  .seg button.on{background:var(--ink);color:#fff}
+  .colhead{font-size:12px;font-weight:700;margin:16px 0 8px;padding-top:10px;border-top:1px solid var(--line)}
+
+  /* modal */
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
+  #modal.open{display:flex}
+  #modal .box{background:#fff;border-radius:12px;max-width:760px;width:92%;max-height:84vh;display:flex;flex-direction:column;overflow:hidden}
+  #modal .box header{background:var(--ink);color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center}
+  #modal .box header h2{font-size:15px;margin:0}
+  #modal .box header button{background:none;border:0;color:#fff;font-size:18px;cursor:pointer}
+  #modal .box .body{padding:16px;overflow:auto}
+  #export-html{width:100%;min-height:320px;font-family:ui-monospace,Menlo,monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre;color:var(--ink)}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:0 16px 16px}
+  .modal-actions button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:9px 16px;font-size:13px;font-family:inherit;cursor:pointer}
+  .modal-actions button.alt{background:#e9e6e2;color:var(--ink)}
+
+  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:60}
+  #toast.show{opacity:1}
+
+  @media(max-width:980px){aside.right{display:none}}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="brand">TR LIBRARY <span>· Newsletter Builder</span></div>
+  <input id="nb-title" data-testid="newsletter-title" placeholder="Newsletter title (internal)" />
+  <div class="bar-actions">
+    <button class="tb" id="btn-new" data-testid="btn-new">New</button>
+    <button class="tb" id="btn-template" data-testid="btn-template">Template</button>
+    <button class="tb" id="btn-load" data-testid="btn-load">Open file…</button>
+    <button class="tb" id="btn-save" data-testid="btn-save">Save HTML file</button>
+    <button class="tb" id="btn-mobile" data-testid="btn-mobile">Mobile view</button>
+    <button class="tb primary" id="btn-export" data-testid="btn-export">Get HTML for Constant Contact</button>
+  </div>
+  <input type="file" id="file-input" accept=".html,.htm,.json">
+</header>
+
+<main>
+  <aside class="left">
+    <h3 class="panel">Add a block</h3>
+    <div class="palette" id="palette"></div>
+    <h3 class="panel">Structure</h3>
+    <div id="structure"></div>
+  </aside>
+
+  <section class="stage">
+    <div id="email-canvas" data-testid="email-canvas"></div>
+  </section>
+
+  <aside class="right">
+    <h3 class="panel">Block settings</h3>
+    <div id="inspector"><p class="hint">Select a block in the preview (or add one from the left) to edit its content here.</p></div>
+  </aside>
+</main>
+
+<div id="modal">
+  <div class="box">
+    <header><h2>Email HTML — paste into Constant Contact</h2><button id="modal-close">✕</button></header>
+    <div class="body">
+      <p class="hint" style="margin:0 0 10px">In Constant Contact: create a new email → choose <b>“Code your own”</b> (custom code email) → paste this HTML. Images must already be hosted (Constant Contact library, your DAM, or any public URL).</p>
+      <textarea id="export-html" readonly data-testid="export-html"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="alt" id="btn-download-export">Download .html</button>
+      <button id="btn-copy-export" data-testid="btn-copy-export">Copy to clipboard</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================================
+   TRPL Newsletter Builder
+   Design system mirrored from the Library's MailChimp newsletters:
+   660px white card on #f4f4f4 · DM Sans headings (31px bold, centered)
+   Helvetica Neue 16px body · square black buttons · 2px #D1D1D1 dividers
+   -------------------------------------------------------------------------
+   Automation API for Claude (see CLAUDE.md): window.NB
+   ========================================================================= */
+(function(){
+"use strict";
+
+/* ---------------- state ---------------- */
+const BLOCK_DEFS = {
+  logo:    {name:"Logo",        ic:"🏛"},
+  hero:    {name:"Hero image",  ic:"🖼"},
+  heading: {name:"Heading",     ic:"H"},
+  text:    {name:"Text",        ic:"¶"},
+  button:  {name:"Button",      ic:"⬛"},
+  image:   {name:"Image",       ic:"📷"},
+  columns: {name:"Two columns", ic:"⫴"},
+  divider: {name:"Divider",     ic:"—"},
+  spacer:  {name:"Spacer",      ic:"↕"},
+  footer:  {name:"Footer",      ic:"©"}
+};
+
+const uid = () => "b" + Math.random().toString(36).slice(2,9);
+
+function defaultProps(type){
+  switch(type){
+    case "logo":    return {src:"", alt:"Theodore Roosevelt Presidential Library", href:"https://www.trlibrary.com", width:200};
+    case "hero":    return {src:"", alt:"", href:""};
+    case "heading": return {text:"Section Heading", align:"center"};
+    case "text":    return {html:"Write your paragraph here. Keep it warm, vivid, and concrete — like a park ranger who can't wait to share the story.", align:"center"};
+    case "button":  return {label:"LEARN MORE", href:"https://"};
+    case "image":   return {src:"", alt:"", href:"", caption:""};
+    case "columns": return {cols:[
+        {src:"", alt:"", heading:"Left column", text:"A short blurb for this item.", label:"", href:""},
+        {src:"", alt:"", heading:"Right column", text:"A short blurb for this item.", label:"", href:""}]};
+    case "divider": return {};
+    case "spacer":  return {height:24};
+    case "footer":  return {
+        org:"Theodore Roosevelt Presidential Library",
+        address:"701 Pacific Ave, Medora, ND 58645",
+        note:"You are receiving this email because you signed up for updates from the Theodore Roosevelt Presidential Library."};
+    default: return {};
+  }
+}
+
+let state = { title:"Untitled newsletter", preheader:"", blocks:[] };
+let selectedId = null;
+
+/* ---------------- HTML escaping ---------------- */
+const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const escAttr = esc;
+// Allow a small whitelist of inline tags in text blocks; escape everything else.
+function richText(s){
+  let out = esc(s??"");
+  // restore whitelisted tags the user typed
+  out = out
+    .replace(/&lt;(\/?)(b|strong|i|em|u|br)&gt;/gi, "<$1$2>")
+    .replace(/&lt;a href=&quot;(https?:\/\/[^&"]*)&quot;&gt;/gi, '<a href="$1" style="color:#000000;font-weight:bold;text-decoration:underline;">')
+    .replace(/&lt;\/a&gt;/gi, "</a>")
+    .replace(/\n/g, "<br>");
+  return out;
+}
+
+/* ---------------- email HTML generation ---------------- */
+const FONT_BODY = "'Helvetica Neue', Helvetica, Arial, Verdana, sans-serif";
+const FONT_HEAD = "'DM Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+function placeholderImg(w,h,label){
+  return `https://placehold.co/${w}x${h}/e8e4de/8c3b23?text=${encodeURIComponent(label||"Add image URL")}`;
+}
+
+function renderBlockEmail(b){
+  const p = b.props;
+  switch(b.type){
+
+    case "logo": {
+      const w = Math.min(parseInt(p.width)||200, 612);
+      const img = `<img src="${escAttr(p.src||placeholderImg(400,120,"Logo"))}" alt="${escAttr(p.alt)}" width="${w}" style="display:block;width:${w}px;max-width:100%;height:auto;border:0;">`;
+      const inner = p.href ? `<a href="${escAttr(p.href)}" target="_blank">${img}</a>` : img;
+      return `<tr><td align="center" style="padding:32px 24px 8px;">${inner}</td></tr>`;
+    }
+
+    case "hero": {
+      const img = `<img src="${escAttr(p.src||placeholderImg(1320,760,"Hero image — paste a URL"))}" alt="${escAttr(p.alt)}" width="660" style="display:block;width:100%;max-width:660px;height:auto;border:0;">`;
+      const inner = p.href ? `<a href="${escAttr(p.href)}" target="_blank">${img}</a>` : img;
+      return `<tr><td align="center" style="padding:0;">${inner}</td></tr>`;
+    }
+
+    case "heading":
+      return `<tr><td style="padding:28px 24px 8px;"><h1 style="display:block;margin:0;color:#000000;font-family:${FONT_HEAD};font-size:31px;font-weight:bold;line-height:1.35;text-align:${p.align||"center"};">${esc(p.text)}</h1></td></tr>`;
+
+    case "text":
+      return `<tr><td style="padding:8px 24px;"><p style="margin:0;color:#000000;font-family:${FONT_BODY};font-size:16px;font-weight:normal;line-height:1.5;text-align:${p.align||"center"};">${richText(p.html)}</p></td></tr>`;
+
+    case "button":
+      return `<tr><td align="center" style="padding:18px 24px;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>
+        <td align="center" style="background-color:#000000;border-radius:0;">
+          <a href="${escAttr(p.href)}" target="_blank" style="background-color:#000000;border:2px solid #000000;border-radius:0;color:#ffffff;display:inline-block;font-family:${FONT_BODY};font-size:16px;font-weight:normal;letter-spacing:.03em;padding:16px 28px;text-decoration:none;text-transform:uppercase;">${esc(p.label)}</a>
+        </td></tr></table></td></tr>`;
+
+    case "image": {
+      const img = `<img src="${escAttr(p.src||placeholderImg(1224,700,"Image — paste a URL"))}" alt="${escAttr(p.alt)}" width="612" style="display:block;width:100%;max-width:612px;height:auto;border:0;">`;
+      const inner = p.href ? `<a href="${escAttr(p.href)}" target="_blank">${img}</a>` : img;
+      const cap = p.caption ? `<p style="margin:8px 0 0;color:#6b6b6b;font-family:${FONT_BODY};font-size:13px;line-height:1.4;text-align:center;">${esc(p.caption)}</p>` : "";
+      return `<tr><td align="center" style="padding:12px 24px;">${inner}${cap}</td></tr>`;
+    }
+
+    case "columns": {
+      const col = c => {
+        const img = c.src || true ? `<img src="${escAttr(c.src||placeholderImg(564,376,"Image URL"))}" alt="${escAttr(c.alt)}" width="282" style="display:block;width:100%;max-width:282px;height:auto;border:0;">` : "";
+        const imgL = c.href ? `<a href="${escAttr(c.href)}" target="_blank">${img}</a>` : img;
+        const h = c.heading ? `<h3 style="display:block;margin:14px 0 6px;color:#000000;font-family:${FONT_HEAD};font-size:20px;font-weight:bold;line-height:1.3;text-align:center;">${esc(c.heading)}</h3>` : "";
+        const t = c.text ? `<p style="margin:0;color:#000000;font-family:${FONT_BODY};font-size:15px;line-height:1.5;text-align:center;">${richText(c.text)}</p>` : "";
+        const btn = c.label ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin:14px auto 0;"><tr><td align="center" style="background-color:#000000;"><a href="${escAttr(c.href)}" target="_blank" style="background-color:#000000;border:2px solid #000000;color:#ffffff;display:inline-block;font-family:${FONT_BODY};font-size:14px;padding:12px 20px;text-decoration:none;text-transform:uppercase;letter-spacing:.03em;">${esc(c.label)}</a></td></tr></table>` : "";
+        return `<td class="nb-col" width="50%" valign="top" style="padding:12px;">${imgL}${h}${t}${btn}</td>`;
+      };
+      return `<tr><td style="padding:6px 12px;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>${col(p.cols[0])}${col(p.cols[1])}</tr></table></td></tr>`;
+    }
+
+    case "divider":
+      return `<tr><td style="padding:28px 24px;"><div style="border-top:2px solid #D1D1D1;font-size:0;line-height:0;">&nbsp;</div></td></tr>`;
+
+    case "spacer":
+      return `<tr><td style="padding:0;height:${parseInt(p.height)||24}px;font-size:0;line-height:0;">&nbsp;</td></tr>`;
+
+    case "footer":
+      return `<tr><td style="padding:32px 24px 40px;background-color:#000000;">
+        <p style="margin:0 0 6px;color:#ffffff;font-family:${FONT_HEAD};font-size:16px;font-weight:bold;line-height:1.4;text-align:center;">${esc(p.org)}</p>
+        <p style="margin:0 0 14px;color:#cccccc;font-family:${FONT_BODY};font-size:13px;line-height:1.5;text-align:center;">${esc(p.address)}</p>
+        <p style="margin:0;color:#999999;font-family:${FONT_BODY};font-size:12px;line-height:1.5;text-align:center;">${esc(p.note)}</p>
+      </td></tr>`;
+
+    default: return "";
+  }
+}
+
+function buildEmailHTML(opts){
+  const embed = opts && opts.embedData;
+  const rows = state.blocks.map(renderBlockEmail).join("\n");
+  const pre = state.preheader ? `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${esc(state.preheader)}</div>` : "";
+  const dataComment = embed ? `\n<!--NEWSLETTER-BUILDER-DATA\n${JSON.stringify(state).replace(/--/g,"-\\-")}\nNEWSLETTER-BUILDER-DATA-->` : "";
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>${esc(state.title)}</title>
+<!--[if !mso]><!--><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet"><!--<![endif]-->
+<style>
+  body{margin:0;padding:0;background-color:#f4f4f4;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+  table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}
+  img{-ms-interpolation-mode:bicubic;border:0;height:auto;outline:none;text-decoration:none;}
+  a{word-break:break-word;}
+  @media only screen and (max-width:660px){
+    .nb-card{width:100%!important;}
+    .nb-col{display:block!important;width:100%!important;}
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;">
+${pre}
+<center>
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f4f4;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="660" class="nb-card" style="width:660px;max-width:660px;background-color:#ffffff;">
+${rows}
+</table>
+</td></tr>
+</table>
+</center>${dataComment}
+</body>
+</html>`;
+}
+
+/* ---------------- editor preview ---------------- */
+const canvas = document.getElementById("email-canvas");
+
+function renderPreview(){
+  if(!state.blocks.length){
+    canvas.innerHTML = `<div class="empty-note"><p style="font-size:16px;margin:0 0 6px"><b>Start your newsletter</b></p><p style="margin:0;font-size:13px">Add blocks from the left, or click <b>Template</b> for the standard TR Library layout.</p></div>`;
+    renderStructure(); renderInspector(); return;
+  }
+  const wraps = state.blocks.map(b=>{
+    const inner = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border-collapse:collapse;">${renderBlockEmail(b)}</table>`;
+    return `<div class="blockwrap${b.id===selectedId?" sel":""}" data-block-id="${b.id}" data-block-type="${b.type}">
+      <div class="ctrl">
+        <button data-act="up" title="Move up">↑</button>
+        <button data-act="down" title="Move down">↓</button>
+        <button data-act="dup" title="Duplicate">⧉</button>
+        <button data-act="del" title="Delete">✕</button>
+      </div>${inner}</div>`;
+  }).join("");
+  canvas.innerHTML = `<div style="box-shadow:0 2px 14px rgba(0,0,0,.08);">${wraps}</div>`;
+  renderStructure(); renderInspector();
+}
+
+canvas.addEventListener("click", e=>{
+  const ctl = e.target.closest(".ctrl button");
+  const wrap = e.target.closest(".blockwrap");
+  if(e.target.closest("a")) e.preventDefault();
+  if(!wrap) return;
+  const id = wrap.dataset.blockId;
+  if(ctl){ doAction(ctl.dataset.act, id); return; }
+  selectedId = id; renderPreview();
+});
+
+function doAction(act,id){
+  const i = state.blocks.findIndex(b=>b.id===id);
+  if(i<0) return;
+  if(act==="del"){ state.blocks.splice(i,1); if(selectedId===id) selectedId=null; }
+  if(act==="up" && i>0){ [state.blocks[i-1],state.blocks[i]]=[state.blocks[i],state.blocks[i-1]]; }
+  if(act==="down" && i<state.blocks.length-1){ [state.blocks[i+1],state.blocks[i]]=[state.blocks[i],state.blocks[i+1]]; }
+  if(act==="dup"){ const c = JSON.parse(JSON.stringify(state.blocks[i])); c.id=uid(); state.blocks.splice(i+1,0,c); selectedId=c.id; }
+  commit();
+}
+
+/* ---------------- structure list ---------------- */
+function blockLabel(b){
+  const p=b.props;
+  const t = {heading:p.text, text:(p.html||"").slice(0,32), button:p.label, image:p.alt||p.caption, hero:p.alt, columns:p.cols&&p.cols[0].heading}[b.type];
+  return BLOCK_DEFS[b.type].name + (t?(" · "+t):"");
+}
+function renderStructure(){
+  const el = document.getElementById("structure");
+  el.innerHTML = state.blocks.map(b=>`
+    <div class="srow${b.id===selectedId?" sel":""}" data-block-id="${b.id}">
+      <span class="lbl">${esc(blockLabel(b))}</span>
+      <button class="mini" data-act="up">↑</button>
+      <button class="mini" data-act="down">↓</button>
+      <button class="mini" data-act="del">✕</button>
+    </div>`).join("") || `<p class="hint">No blocks yet.</p>`;
+}
+document.getElementById("structure").addEventListener("click", e=>{
+  const row = e.target.closest(".srow"); if(!row) return;
+  const id = row.dataset.blockId;
+  const act = e.target.closest(".mini");
+  if(act){ doAction(act.dataset.act, id); return; }
+  selectedId = id; renderPreview();
+  const w = canvas.querySelector(`[data-block-id="${id}"]`);
+  if(w && w.scrollIntoView) w.scrollIntoView({behavior:"smooth", block:"center"});
+});
+
+/* ---------------- palette ---------------- */
+const paletteEl = document.getElementById("palette");
+paletteEl.innerHTML = Object.entries(BLOCK_DEFS).map(([k,v])=>
+  `<button data-add="${k}" data-testid="add-${k}"><span class="ic">${v.ic}</span>${v.name}</button>`).join("");
+paletteEl.addEventListener("click", e=>{
+  const btn = e.target.closest("[data-add]"); if(!btn) return;
+  addBlock(btn.dataset.add);
+});
+
+function addBlock(type, props, index){
+  if(!BLOCK_DEFS[type]) return null;
+  const b = {id:uid(), type, props:Object.assign(defaultProps(type), props||{})};
+  let at;
+  if(typeof index==="number") at = Math.max(0, Math.min(index, state.blocks.length));
+  else {
+    const selIdx = state.blocks.findIndex(x=>x.id===selectedId);
+    at = selIdx>=0 ? selIdx+1 : state.blocks.length;
+    // keep footer last
+    if(type!=="footer" && at===state.blocks.length && state.blocks.length && state.blocks[state.blocks.length-1].type==="footer") at--;
+  }
+  state.blocks.splice(at,0,b);
+  selectedId = b.id;
+  commit();
+  const w = canvas.querySelector(`[data-block-id="${b.id}"]`);
+  if(w && w.scrollIntoView) w.scrollIntoView({behavior:"smooth", block:"center"});
+  return b.id;
+}
+
+/* ---------------- inspector ---------------- */
+function fld(id, label, type, value, attrs){
+  const a = attrs||"";
+  if(type==="textarea") return `<div class="field"><label for="f-${id}">${label}</label><textarea id="f-${id}" data-field="${id}" ${a}>${esc(value)}</textarea></div>`;
+  return `<div class="field"><label for="f-${id}">${label}</label><input id="f-${id}" data-field="${id}" type="${type}" value="${escAttr(value)}" ${a}></div>`;
+}
+function alignSeg(id, value){
+  return `<div class="field"><label>Alignment</label><div class="seg" data-seg="${id}">
+    ${["left","center","right"].map(v=>`<button data-val="${v}" class="${v===value?"on":""}">${v}</button>`).join("")}</div></div>`;
+}
+
+function renderInspector(){
+  const el = document.getElementById("inspector");
+  const b = state.blocks.find(x=>x.id===selectedId);
+  if(!b){ el.innerHTML = `<p class="hint">Select a block in the preview (or add one from the left) to edit its content here.</p>
+    ${fld("::preheader","Preview text (preheader)","text",state.preheader,'placeholder="Short line shown after the subject in inboxes"')}
+    <p class="hint">The preheader is hidden in the email body but appears next to the subject line in most inboxes.</p>`;
+    return; }
+  const p=b.props; let h = `<p style="font-size:13px;font-weight:700;margin:0 0 12px">${BLOCK_DEFS[b.type].name}</p>`;
+  switch(b.type){
+    case "logo":
+      h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL","url",p.href)+fld("width","Width (px)","number",p.width);
+      h+=`<p class="hint">Upload the logo to Constant Contact's library (or your DAM) and paste its URL here.</p>`; break;
+    case "hero":
+      h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL (optional)","url",p.href);
+      h+=`<p class="hint">Full-width, edge to edge (660px). Use images at least 1320px wide for retina screens.</p>`; break;
+    case "heading":
+      h+=fld("text","Heading text","text",p.text)+alignSeg("align",p.align); break;
+    case "text":
+      h+=fld("html","Paragraph text","textarea",p.html)+alignSeg("align",p.align);
+      h+=`<p class="hint">Allowed inline tags: &lt;b&gt; &lt;i&gt; &lt;u&gt; &lt;br&gt; and &lt;a href="https://…"&gt;link&lt;/a&gt;. Blank lines become line breaks.</p>`; break;
+    case "button":
+      h+=fld("label","Button label","text",p.label)+fld("href","Link URL","url",p.href);
+      h+=`<p class="hint">Labels render in ALL CAPS, black square button — the Library's house style.</p>`; break;
+    case "image":
+      h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL (optional)","url",p.href)+fld("caption","Caption (optional)","text",p.caption);
+      h+=`<p class="hint">Inset image (612px wide). Use images at least 1224px wide.</p>`; break;
+    case "columns":
+      [0,1].forEach(i=>{
+        const c=p.cols[i];
+        h+=`<div class="colhead">${i===0?"Left":"Right"} column</div>`;
+        h+=fld(`cols.${i}.src`,"Image URL","url",c.src)+fld(`cols.${i}.heading`,"Heading","text",c.heading)+fld(`cols.${i}.text`,"Text","textarea",c.text,'style="min-height:70px"')+fld(`cols.${i}.label`,"Button label (optional)","text",c.label)+fld(`cols.${i}.href`,"Link URL","url",c.href);
+      }); break;
+    case "spacer":
+      h+=fld("height","Height (px)","number",p.height); break;
+    case "footer":
+      h+=fld("org","Organization","text",p.org)+fld("address","Address line","text",p.address)+fld("note","Small print","textarea",p.note,'style="min-height:70px"');
+      h+=`<p class="hint">Constant Contact automatically appends its own unsubscribe footer below this.</p>`; break;
+    case "divider":
+      h+=`<p class="hint">A 2px light-gray rule, matching the Library's newsletters. No settings.</p>`; break;
+  }
+  el.innerHTML = h;
+}
+
+document.getElementById("inspector").addEventListener("input", e=>{
+  const f = e.target.closest("[data-field]"); if(!f) return;
+  const key = f.dataset.field;
+  if(key==="::preheader"){ state.preheader = f.value; commit({keepFocus:true}); return; }
+  const b = state.blocks.find(x=>x.id===selectedId); if(!b) return;
+  setDeep(b.props, key, f.type==="number" ? (parseInt(f.value)||0) : f.value);
+  commit({keepFocus:true});
+});
+document.getElementById("inspector").addEventListener("click", e=>{
+  const btn = e.target.closest(".seg button"); if(!btn) return;
+  const seg = btn.closest("[data-seg]");
+  const b = state.blocks.find(x=>x.id===selectedId); if(!b) return;
+  setDeep(b.props, seg.dataset.seg, btn.dataset.val);
+  commit();
+});
+function setDeep(obj, path, val){
+  const parts = path.split(".");
+  let o = obj;
+  for(let i=0;i<parts.length-1;i++) o = o[parts[i]];
+  o[parts[parts.length-1]] = val;
+}
+
+/* commit: re-render + autosave; keepFocus avoids nuking the inspector while typing */
+function commit(opts){
+  if(opts && opts.keepFocus){
+    const active = document.activeElement;
+    const fieldKey = active && active.dataset ? active.dataset.field : null;
+    const selStart = active && active.selectionStart;
+    // re-render preview + structure only
+    const insp = document.getElementById("inspector");
+    const keep = insp.innerHTML; // rebuild everything but restore inspector
+    renderPreviewOnly();
+    renderStructure();
+    autosave();
+    if(fieldKey!==null){ /* inspector untouched */ }
+    return;
+  }
+  renderPreview();
+  autosave();
+}
+function renderPreviewOnly(){
+  const scroll = document.querySelector("section.stage").scrollTop;
+  const wraps = state.blocks.map(b=>{
+    const inner = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border-collapse:collapse;">${renderBlockEmail(b)}</table>`;
+    return `<div class="blockwrap${b.id===selectedId?" sel":""}" data-block-id="${b.id}" data-block-type="${b.type}">
+      <div class="ctrl"><button data-act="up">↑</button><button data-act="down">↓</button><button data-act="dup">⧉</button><button data-act="del">✕</button></div>${inner}</div>`;
+  }).join("");
+  canvas.innerHTML = state.blocks.length ? `<div style="box-shadow:0 2px 14px rgba(0,0,0,.08);">${wraps}</div>` : canvas.innerHTML;
+  document.querySelector("section.stage").scrollTop = scroll;
+}
+
+/* ---------------- persistence ---------------- */
+function autosave(){ try{ localStorage.setItem("nb-autosave", JSON.stringify(state)); }catch(e){} }
+function loadAutosave(){ try{ const s = localStorage.getItem("nb-autosave"); if(s){ state = JSON.parse(s); return true; } }catch(e){} return false; }
+
+const titleInput = document.getElementById("nb-title");
+titleInput.addEventListener("input", ()=>{ state.title = titleInput.value; autosave(); });
+
+/* Save: full email HTML with embedded state (round-trip editable) */
+function saveFile(){
+  const html = buildEmailHTML({embedData:true});
+  const blob = new Blob([html], {type:"text/html"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.title||"newsletter").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") + ".html";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Saved. Re-open this file later to keep editing.");
+}
+
+/* Load: extract embedded state from a saved file (or accept raw JSON) */
+function loadFromString(text){
+  // 1) embedded comment
+  let m = text.match(/<!--NEWSLETTER-BUILDER-DATA\n([\s\S]*?)\nNEWSLETTER-BUILDER-DATA-->/);
+  if(m){ applyState(JSON.parse(m[1].replace(/-\\-/g,"--"))); return true; }
+  // 2) raw JSON file
+  try{ const j = JSON.parse(text); if(j && Array.isArray(j.blocks)){ applyState(j); return true; } }catch(e){}
+  return false;
+}
+function applyState(s){
+  // sanity: keep only known block types, ensure ids
+  s.blocks = (s.blocks||[]).filter(b=>BLOCK_DEFS[b.type]).map(b=>({id:b.id||uid(), type:b.type, props:Object.assign(defaultProps(b.type), b.props||{})}));
+  state = {title:s.title||"Untitled newsletter", preheader:s.preheader||"", blocks:s.blocks};
+  selectedId = null;
+  titleInput.value = state.title;
+  commit();
+}
+
+document.getElementById("btn-save").addEventListener("click", saveFile);
+document.getElementById("btn-load").addEventListener("click", ()=>document.getElementById("file-input").click());
+document.getElementById("file-input").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=> {
+    if(loadFromString(r.result)) toast("Newsletter loaded.");
+    else toast("Couldn't find builder data in that file. Open a file saved by this tool (or a JSON file).");
+    e.target.value="";
+  };
+  r.readAsText(f);
+});
+
+/* ---------------- export modal ---------------- */
+const modal = document.getElementById("modal");
+document.getElementById("btn-export").addEventListener("click", ()=>{
+  document.getElementById("export-html").value = buildEmailHTML({embedData:true});
+  modal.classList.add("open");
+});
+document.getElementById("modal-close").addEventListener("click", ()=>modal.classList.remove("open"));
+modal.addEventListener("click", e=>{ if(e.target===modal) modal.classList.remove("open"); });
+document.getElementById("btn-copy-export").addEventListener("click", async ()=>{
+  const ta = document.getElementById("export-html");
+  try{ await navigator.clipboard.writeText(ta.value); toast("HTML copied — paste into Constant Contact's custom code editor."); }
+  catch(e){ ta.select(); document.execCommand("copy"); toast("HTML copied."); }
+});
+document.getElementById("btn-download-export").addEventListener("click", saveFile);
+
+/* ---------------- misc toolbar ---------------- */
+document.getElementById("btn-new").addEventListener("click", ()=>{
+  if(state.blocks.length && !confirm("Start a new newsletter? Unsaved changes will be lost (autosave will be replaced).")) return;
+  state = {title:"Untitled newsletter", preheader:"", blocks:[]};
+  selectedId=null; titleInput.value=state.title; commit();
+});
+document.getElementById("btn-mobile").addEventListener("click", e=>{
+  canvas.classList.toggle("mobile");
+  e.target.textContent = canvas.classList.contains("mobile") ? "Desktop view" : "Mobile view";
+});
+
+/* ---------------- template ---------------- */
+function loadTemplate(){
+  const mk = (type,props)=>({id:uid(), type, props:Object.assign(defaultProps(type), props||{})});
+  state = {
+    title:"Monthly Public Newsletter",
+    preheader:"News from the Theodore Roosevelt Presidential Library",
+    blocks:[
+      mk("logo"),
+      mk("hero", {alt:"Badlands hero image"}),
+      mk("heading", {text:"Big News From Medora"}),
+      mk("text", {html:"Open with the story — vivid, warm, and specific. What happened, why it matters, and what it felt like to be there."}),
+      mk("button", {label:"READ MORE", href:"https://www.trlibrary.com"}),
+      mk("divider"),
+      mk("heading", {text:"Second Story"}),
+      mk("image", {alt:"Story image"}),
+      mk("text", {html:"A second section. Keep paragraphs short. One idea per section, one clear call to action."}),
+      mk("button", {label:"LEARN MORE", href:"https://www.trlibrary.com"}),
+      mk("divider"),
+      mk("heading", {text:"Around the Library"}),
+      mk("columns"),
+      mk("divider"),
+      mk("heading", {text:"Plan Your Visit"}),
+      mk("text", {html:"Tickets, hours, and everything you need for a trip to Medora."}),
+      mk("button", {label:"GET TICKETS", href:"https://www.trlibrary.com/visit"}),
+      mk("footer")
+    ]};
+  selectedId=null; titleInput.value=state.title; commit();
+  toast("Template loaded — the standard TR Library newsletter layout.");
+}
+document.getElementById("btn-template").addEventListener("click", ()=>{
+  if(state.blocks.length && !confirm("Replace the current newsletter with the template?")) return;
+  loadTemplate();
+});
+
+/* ---------------- toast ---------------- */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("show"), 3200);
+}
+
+/* ---------------- automation API (window.NB) ---------------- */
+window.NB = {
+  /** Current newsletter state (deep copy). */
+  getState: () => JSON.parse(JSON.stringify(state)),
+  /** Replace the whole newsletter. Accepts {title, preheader, blocks:[{type, props}]}. */
+  setState: (s) => { applyState(typeof s==="string"?JSON.parse(s):JSON.parse(JSON.stringify(s))); return true; },
+  /** Add a block. addBlock(type, props?, index?) -> block id. Types: logo, hero, heading, text, button, image, columns, divider, spacer, footer. */
+  addBlock: (type, props, index) => addBlock(type, props, index),
+  /** Update one block's props by id (shallow merge; use dot paths via updateField for columns). */
+  updateBlock: (id, props) => { const b=state.blocks.find(x=>x.id===id); if(!b) return false; Object.assign(b.props, props); commit(); return true; },
+  /** Set a single (possibly nested) prop, e.g. updateField(id, "cols.0.heading", "Title"). */
+  updateField: (id, path, value) => { const b=state.blocks.find(x=>x.id===id); if(!b) return false; setDeep(b.props, path, value); commit(); return true; },
+  /** Move block to a new index. */
+  moveBlock: (id, index) => { const i=state.blocks.findIndex(x=>x.id===id); if(i<0) return false; const [b]=state.blocks.splice(i,1); state.blocks.splice(Math.max(0,Math.min(index,state.blocks.length)),0,b); commit(); return true; },
+  removeBlock: (id) => { const i=state.blocks.findIndex(x=>x.id===id); if(i<0) return false; state.blocks.splice(i,1); commit(); return true; },
+  /** Full Constant Contact-ready email HTML (with embedded state for round-trip). */
+  exportHTML: () => buildEmailHTML({embedData:true}),
+  /** Load the standard TR Library template. */
+  loadTemplate: () => { loadTemplate(); return true; },
+  /** Import a previously exported/saved HTML string (rebuilds the editor). */
+  importHTML: (html) => loadFromString(html),
+  setTitle: (t) => { state.title=t; titleInput.value=t; autosave(); return true; },
+  setPreheader: (t) => { state.preheader=t; autosave(); return true; },
+  blockTypes: Object.keys(BLOCK_DEFS)
+};
+
+/* ---------------- init ---------------- */
+if(loadAutosave()){ titleInput.value = state.title; }
+renderPreview();
+})();
+</script>
+</body>
+</html>
