@@ -20,7 +20,7 @@ NB.loadTemplate();                          // standard TR Library layout, or bu
 NB.setState({ title: "...", preheader: "...", blocks: [
   { type: "header",  props: { src: "https://…/header.png", alt: "Theodore Roosevelt Presidential Library", href: "https://www.trlibrary.com" } },
   { type: "heading", props: { text: "The Library is Now Open!" } },
-  { type: "text",    props: { html: "Body copy. Allowed inline tags: <b> <i> <u> <br> and <a href=\"https://…\">links</a>." } },
+  { type: "text",    props: { html: "Body copy. Allowed tags: <b> <i> <u> <br> <ul>/<ol>/<li> and <a href=\"https://…\">links</a>. Anything else is stripped." } },
   { type: "button",  props: { label: "GET TICKETS", href: "https://…" } },
   { type: "divider" },
   { type: "columns", props: { cols: [
@@ -40,6 +40,30 @@ Block types: `header, hero, heading, text, button, image, columns, divider, spac
 The `header` block is the newsletter's top banner: a 3:1 branded graphic generated in
 Header Studio (photo + wordmark plaque). Legacy `logo` blocks in old files auto-migrate
 to `header`. Use `hero`/`image` for story photos further down.
+
+`text` blocks (and column text) support rich content: in the UI there's a WYSIWYG toolbar
+(bold/italic/underline, links, bulleted & numbered lists); via the API just set `html`
+with the whitelisted tags above.
+
+The `footer` block props: `logoSrc` (white horizontal wordmark, default
+`https://newsletter.labs.trlibrary.com/assets/trpl-wordmark-horizontal-white.png`),
+`logoAlt, siteUrl, contactLabel, contactUrl` (default `https://www.trlibrary.com/contact`),
+`org, address` (default to Constant Contact account merge tags — see below), `note`.
+
+## Constant Contact merge tags & hard requirements
+
+The export automatically inserts CC's required `[[trackingImage]]` right after `<body>` —
+don't add it again. CC appends its own unsubscribe/compliance footer at send time.
+
+Personalization tags work anywhere in text: `[[FIRSTNAME OR "Friend"]]`, `[[LASTNAME]]`,
+`[[EMAILADDRESS]]`, `[[CITY]]`, `[[CUSTOM.<field_name>]]`, and account tags
+`[[account.OrganizationName]]`, `[[account.AddressLine1]]`, `[[account.City]]`,
+`[[account.usState]]`, `[[account.PostalCode]]`, `[[account.SiteURL]]`. The builder
+preview substitutes sample values; the export keeps raw tags for CC to fill.
+
+Hard limits (CC rejects otherwise): total HTML ≤ 400 KB; must not contain the character
+sequences `[#`, `${`, or `<@`. The export modal checks all of these, and the builder's
+embedded round-trip state is base64-encoded to stay clear of them.
 
 Claude can also work entirely offline: generate the same email HTML by opening
 `index.html` locally, or hand Matt a state JSON — the builder's **Open file…** accepts
