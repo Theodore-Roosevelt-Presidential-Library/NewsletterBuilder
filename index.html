@@ -98,7 +98,6 @@
   <div class="brand">TR LIBRARY <span>· Newsletter Builder</span></div>
   <input id="nb-title" data-testid="newsletter-title" placeholder="Newsletter title (internal)" />
   <div class="bar-actions">
-    <a class="tb" href="header.html" data-testid="btn-header-studio" style="text-decoration:none;display:inline-block">Header Studio</a>
     <button class="tb" id="btn-new" data-testid="btn-new">New</button>
     <button class="tb" id="btn-template" data-testid="btn-template">Template</button>
     <button class="tb" id="btn-load" data-testid="btn-load">Open file…</button>
@@ -553,7 +552,8 @@ function renderInspector(){
   const p=b.props; let h = `<p style="font-size:13px;font-weight:700;margin:0 0 12px">${BLOCK_DEFS[b.type].name}</p>`;
   switch(b.type){
     case "header":
-      h+=`<p class="hint" style="margin:0 0 12px"><a href="header.html" target="_blank" style="color:var(--accent);font-weight:700;">Open Header Studio →</a> to generate this graphic (photo + wordmark plaque), upload the PNG to Constant Contact's library, then paste its URL below.</p>`;
+      h+=`<a href="header.html" target="_blank" data-testid="btn-header-studio" style="display:block;text-align:center;background:var(--accent);color:#fff;border-radius:6px;padding:10px 12px;font-size:13px;font-weight:700;text-decoration:none;margin:0 0 8px">Open Header Studio →</a>
+      <p class="hint" style="margin:0 0 12px">Generate the branded graphic (photo + wordmark plaque), then drop the PNG onto this block or paste its hosted URL below.</p>`;
       h+=imgFld("src","Image URL",p.src,b)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL","url",p.href);
       h+=`<p class="hint">Full-width banner (660px, 3:1). Export at 1800×600 or 1320×440 from Header Studio. You can also drop an image straight onto the block.</p>`; break;
     case "hero":

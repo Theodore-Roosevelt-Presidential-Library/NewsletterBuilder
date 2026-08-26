@@ -110,7 +110,8 @@ HDR.getOptions(); HDR.palette;                 // introspection
 ```
 
 UI hooks: `data-testid` on `btn-download, btn-copy, drop, url-input, url-go, zoom, dim,
-scale, yoff, size, btn-header-studio` (link in the builder toolbar), `btn-back` (link back).
+scale, yoff, size`, plus `btn-header-studio` (link inside the header block's inspector
+panel in the builder — select a header block to see it) and `btn-back` (link back).
 The generated PNG must be uploaded to Constant Contact's image library (or the DAM);
 then paste its hosted URL into the newsletter builder's hero block.
 
