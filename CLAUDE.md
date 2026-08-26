@@ -59,7 +59,7 @@ Personalization tags work anywhere in text: `[[FIRSTNAME OR "Friend"]]`, `[[LAST
 `[[EMAILADDRESS]]`, `[[CITY]]`, `[[CUSTOM.<field_name>]]`, and account tags
 `[[account.OrganizationName]]`, `[[account.AddressLine1]]`, `[[account.City]]`,
 `[[account.usState]]`, `[[account.PostalCode]]`, `[[account.SiteURL]]`. The builder
-preview substitutes sample values; the export keeps raw tags for CC to fill.
+preview shows the raw tags; the export keeps them for CC to fill at send time.
 
 Hard limits (CC rejects otherwise): total HTML ≤ 400 KB; must not contain the character
 sequences `[#`, `${`, or `<@`. The export modal checks all of these, and the builder's

@@ -453,28 +453,8 @@ ${rows}
 /* ---------------- editor preview ---------------- */
 const canvas = document.getElementById("email-canvas");
 
-/* Constant Contact merge tags — sample values shown in the preview only;
-   the export keeps the raw tags so CC fills them at send time. */
-const MERGE_SAMPLES = {
-  "account.OrganizationName":"Theodore Roosevelt Presidential Library",
-  "account.AddressLine1":"701 Pacific Ave", "account.AddressLine2":"", "account.AddressLine3":"",
-  "account.City":"Medora", "account.State":"North Dakota", "account.usState":"ND",
-  "account.PostalCode":"58645", "account.Country":"United States", "account.CountryCode":"US",
-  "account.SiteURL":"https://www.trlibrary.com",
-  "FIRSTNAME":"Theodore", "LASTNAME":"Roosevelt", "EMAILADDRESS":"friend@example.com",
-  "COMPANYNAME":"", "CITY":"Medora", "STATENAME":"North Dakota", "POSTALCODE":"58645"
-};
-function previewMerge(html){
-  return html.replace(/\[\[([^\]]+)\]\]/g, (m, tag)=>{
-    tag = tag.trim();
-    if(tag==="trackingImage") return "";
-    const or = tag.match(/^(.+?)\s+OR\s+"([^"]*)"\s*$/i);
-    const key = (or?or[1]:tag).trim();
-    if(MERGE_SAMPLES[key]!==undefined && MERGE_SAMPLES[key]!=="") return MERGE_SAMPLES[key];
-    if(or) return or[2];
-    return m; // unknown tag: show as-is so typos are visible
-  });
-}
+/* Constant Contact merge tags (e.g. [[account.OrganizationName]], [[FIRSTNAME OR "Friend"]])
+   are shown raw in the preview — CC fills them at send time. */
 
 function renderPreview(){
   if(!state.blocks.length){
@@ -482,7 +462,7 @@ function renderPreview(){
     renderStructure(); renderInspector(); return;
   }
   const wraps = state.blocks.map(b=>{
-    const inner = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border-collapse:collapse;">${previewMerge(renderBlockEmail(b))}</table>`;
+    const inner = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border-collapse:collapse;">${renderBlockEmail(b)}</table>`;
     return `<div class="blockwrap${b.id===selectedId?" sel":""}" data-block-id="${b.id}" data-block-type="${b.type}">
       ${hasLocalImg(b)?'<span class="localbadge">unhosted image</span>':''}
       <div class="ctrl">
@@ -752,7 +732,7 @@ function renderInspector(){
         +fld("note","Small print","textarea",p.note,'style="min-height:70px"');
       h+=`<p class="hint">The organization and address lines use Constant Contact merge tags like
         <code>[[account.OrganizationName]]</code> and <code>[[account.AddressLine1]]</code> — they fill in from
-        the CC account at send time (the preview shows sample values). Personalization tags like
+        the CC account at send time (shown raw in the preview). Personalization tags like
         <code>[[FIRSTNAME OR "Friend"]]</code> work in any text block. The export automatically includes CC's
         required <code>[[trackingImage]]</code> tag, and Constant Contact appends its own unsubscribe/compliance
         footer below this block.</p>`; break;
@@ -833,7 +813,7 @@ function commit(opts){
 function renderPreviewOnly(){
   const scroll = document.querySelector("section.stage").scrollTop;
   const wraps = state.blocks.map(b=>{
-    const inner = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border-collapse:collapse;">${previewMerge(renderBlockEmail(b))}</table>`;
+    const inner = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border-collapse:collapse;">${renderBlockEmail(b)}</table>`;
     return `<div class="blockwrap${b.id===selectedId?" sel":""}" data-block-id="${b.id}" data-block-type="${b.type}">
       ${hasLocalImg(b)?'<span class="localbadge">unhosted image</span>':''}
       <div class="ctrl"><button data-act="up">↑</button><button data-act="down">↓</button><button data-act="dup">⧉</button><button data-act="del">✕</button></div>${inner}</div>`;
