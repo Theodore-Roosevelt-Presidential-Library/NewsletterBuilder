@@ -156,7 +156,7 @@
 
 /* ---------------- state ---------------- */
 const BLOCK_DEFS = {
-  logo:    {name:"Logo",        ic:"🏛"},
+  header:  {name:"Header",      ic:"🏛"},
   hero:    {name:"Hero image",  ic:"🖼"},
   heading: {name:"Heading",     ic:"H"},
   text:    {name:"Text",        ic:"¶"},
@@ -172,7 +172,7 @@ const uid = () => "b" + Math.random().toString(36).slice(2,9);
 
 function defaultProps(type){
   switch(type){
-    case "logo":    return {src:"", alt:"Theodore Roosevelt Presidential Library", href:"https://www.trlibrary.com", width:200};
+    case "header":  return {src:"", alt:"Theodore Roosevelt Presidential Library", href:"https://www.trlibrary.com"};
     case "hero":    return {src:"", alt:"", href:""};
     case "heading": return {text:"Section Heading", align:"center"};
     case "text":    return {html:"Write your paragraph here. Keep it warm, vivid, and concrete — like a park ranger who can't wait to share the story.", align:"center"};
@@ -221,11 +221,10 @@ function renderBlockEmail(b){
   const p = b.props;
   switch(b.type){
 
-    case "logo": {
-      const w = Math.min(parseInt(p.width)||200, 612);
-      const img = `<img src="${escAttr(p.src||placeholderImg(400,120,"Logo"))}" alt="${escAttr(p.alt)}" width="${w}" style="display:block;width:${w}px;max-width:100%;height:auto;border:0;">`;
+    case "header": {
+      const img = `<img src="${escAttr(p.src||placeholderImg(1800,600,"Header — make one in Header Studio"))}" alt="${escAttr(p.alt)}" width="660" style="display:block;width:100%;max-width:660px;height:auto;border:0;">`;
       const inner = p.href ? `<a href="${escAttr(p.href)}" target="_blank">${img}</a>` : img;
-      return `<tr><td align="center" style="padding:32px 24px 8px;">${inner}</td></tr>`;
+      return `<tr><td align="center" style="padding:0;">${inner}</td></tr>`;
     }
 
     case "hero": {
@@ -367,7 +366,7 @@ function doAction(act,id){
 /* ---------------- structure list ---------------- */
 function blockLabel(b){
   const p=b.props;
-  const t = {heading:p.text, text:(p.html||"").slice(0,32), button:p.label, image:p.alt||p.caption, hero:p.alt, columns:p.cols&&p.cols[0].heading}[b.type];
+  const t = {heading:p.text, text:(p.html||"").slice(0,32), button:p.label, image:p.alt||p.caption, hero:p.alt, header:p.alt, columns:p.cols&&p.cols[0].heading}[b.type];
   return BLOCK_DEFS[b.type].name + (t?(" · "+t):"");
 }
 function renderStructure(){
@@ -438,9 +437,10 @@ function renderInspector(){
     return; }
   const p=b.props; let h = `<p style="font-size:13px;font-weight:700;margin:0 0 12px">${BLOCK_DEFS[b.type].name}</p>`;
   switch(b.type){
-    case "logo":
-      h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL","url",p.href)+fld("width","Width (px)","number",p.width);
-      h+=`<p class="hint">Upload the logo to Constant Contact's library (or your DAM) and paste its URL here.</p>`; break;
+    case "header":
+      h+=`<p class="hint" style="margin:0 0 12px"><a href="header.html" target="_blank" style="color:var(--accent);font-weight:700;">Open Header Studio →</a> to generate this graphic (photo + wordmark plaque), upload the PNG to Constant Contact's library, then paste its URL below.</p>`;
+      h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL","url",p.href);
+      h+=`<p class="hint">Full-width banner (660px, 3:1). Export at 1800×600 or 1320×440 from Header Studio.</p>`; break;
     case "hero":
       h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL (optional)","url",p.href);
       h+=`<p class="hint">Full-width, edge to edge (660px). Use images at least 1320px wide for retina screens.</p>`; break;
@@ -552,6 +552,8 @@ function loadFromString(text){
   return false;
 }
 function applyState(s){
+  // migrate legacy "logo" blocks (replaced by "header") — keep old saved files working
+  (s.blocks||[]).forEach(b=>{ if(b.type==="logo"){ b.type="header"; if(b.props) delete b.props.width; } });
   // sanity: keep only known block types, ensure ids
   s.blocks = (s.blocks||[]).filter(b=>BLOCK_DEFS[b.type]).map(b=>({id:b.id||uid(), type:b.type, props:Object.assign(defaultProps(b.type), b.props||{})}));
   state = {title:s.title||"Untitled newsletter", preheader:s.preheader||"", blocks:s.blocks};
@@ -606,8 +608,7 @@ function loadTemplate(){
     title:"Monthly Public Newsletter",
     preheader:"News from the Theodore Roosevelt Presidential Library",
     blocks:[
-      mk("logo"),
-      mk("hero", {alt:"Badlands hero image"}),
+      mk("header", {alt:"Theodore Roosevelt Presidential Library"}),
       mk("heading", {text:"Big News From Medora"}),
       mk("text", {html:"Open with the story — vivid, warm, and specific. What happened, why it matters, and what it felt like to be there."}),
       mk("button", {label:"READ MORE", href:"https://www.trlibrary.com"}),

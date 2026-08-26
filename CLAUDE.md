@@ -18,8 +18,7 @@ NB.setTitle("July Newsletter");
 NB.setPreheader("News from the Theodore Roosevelt Presidential Library");
 NB.loadTemplate();                          // standard TR Library layout, or build from scratch:
 NB.setState({ title: "...", preheader: "...", blocks: [
-  { type: "logo",    props: { src: "https://…/logo.png", href: "https://www.trlibrary.com" } },
-  { type: "hero",    props: { src: "https://…/hero.jpg", alt: "…" } },
+  { type: "header",  props: { src: "https://…/header.png", alt: "Theodore Roosevelt Presidential Library", href: "https://www.trlibrary.com" } },
   { type: "heading", props: { text: "The Library is Now Open!" } },
   { type: "text",    props: { html: "Body copy. Allowed inline tags: <b> <i> <u> <br> and <a href=\"https://…\">links</a>." } },
   { type: "button",  props: { label: "GET TICKETS", href: "https://…" } },
@@ -37,7 +36,10 @@ Full API: `NB.getState()`, `NB.setState(s)`, `NB.addBlock(type, props?, index?)`
 `NB.moveBlock(id, index)`, `NB.removeBlock(id)`, `NB.exportHTML()`,
 `NB.importHTML(htmlString)`, `NB.loadTemplate()`, `NB.setTitle(t)`, `NB.setPreheader(t)`.
 
-Block types: `logo, hero, heading, text, button, image, columns, divider, spacer, footer`.
+Block types: `header, hero, heading, text, button, image, columns, divider, spacer, footer`.
+The `header` block is the newsletter's top banner: a 3:1 branded graphic generated in
+Header Studio (photo + wordmark plaque). Legacy `logo` blocks in old files auto-migrate
+to `header`. Use `hero`/`image` for story photos further down.
 
 Claude can also work entirely offline: generate the same email HTML by opening
 `index.html` locally, or hand Matt a state JSON — the builder's **Open file…** accepts
