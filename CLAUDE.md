@@ -62,6 +62,35 @@ its fields in the right-hand inspector (`data-field` attributes).
 - Images: paste hosted URLs (Constant Contact library or DAM). Hero ≥1320px wide,
   inset images ≥1224px, column images ≥564px.
 
+## Header Studio (`header.html`)
+
+Generates branded email header graphics (the pattern from the Library's Canva
+"Email Headers" template): a full-bleed photo in the 3:1 header shape with the official
+TRPL wordmark on a solid plaque centered on top. The wordmark SVG is inlined
+(`assets/trpl-wordmark.svg` is the source) and recolorable.
+
+Brand colors (TRPL Brand Guidelines p.12) — plaque/backgrounds: Night Sky `#092A4D`,
+Dark Forest `#1B4532`, Dark Gray `#25282A`, Black, Sand `#D1CCBD`, Deep Orange `#E7805D`,
+Bright Forest `#8FC895`, White. Accent colors (`#F9D635`, `#87BB41`, `#F36079`, `#FC924E`,
+`#99ADC5`) are for headline text only, never backgrounds. Wordmark is normally white;
+use Dark Gray/Night Sky on light plaques.
+
+Automation API: `window.HDR`
+
+```js
+await HDR.setImage("https://…/photo.jpg");     // must allow CORS or export will fail;
+                                               // local file/drag-drop always works
+await HDR.setOptions({ plaque:"#1B4532", mark:"#FFFFFF", scale:0.78, yoff:0,
+                       zoom:1.2, panX:0, panY:-40, dim:15, outW:1800, outH:600 });
+const png = await HDR.exportDataURL();         // PNG data URL
+HDR.getOptions(); HDR.palette;                 // introspection
+```
+
+UI hooks: `data-testid` on `btn-download, btn-copy, drop, url-input, url-go, zoom, dim,
+scale, yoff, size, btn-header-studio` (link in the builder toolbar), `btn-back` (link back).
+The generated PNG must be uploaded to Constant Contact's image library (or the DAM);
+then paste its hosted URL into the newsletter builder's hero block.
+
 ## Publishing to Constant Contact
 
 Export → copy HTML → Constant Contact → new email → **Code your own** → paste.

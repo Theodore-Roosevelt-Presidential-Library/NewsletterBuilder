@@ -15,7 +15,15 @@ into Constant Contact's "Code your own" editor. Runs entirely in the browser —
 5. **Save HTML file** downloads the email with the design data embedded — reopen it later
    with **Open file…** to keep editing. Work also autosaves in your browser.
 
-Claude can build newsletters here too — see [CLAUDE.md](CLAUDE.md).
+### Header Studio
+
+`header.html` (linked from the builder toolbar) generates branded email headers:
+drop in a photo, it composites the TRPL wordmark plaque on top in brand colors —
+the same look as the Canva "Email Headers" template. Drag to reposition, pick plaque
+and wordmark colors, download the PNG, upload it to Constant Contact's library, and
+paste the URL into a hero block.
+
+Claude can build newsletters and headers here too — see [CLAUDE.md](CLAUDE.md).
 
 ## Hosting (GitHub Pages)
 
