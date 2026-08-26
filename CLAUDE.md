@@ -99,7 +99,11 @@ The same connector trick works for Header Studio: `await HDR.exportDataURL()` �
 
 Toolbar buttons carry `data-testid`: `btn-new, btn-template, btn-load, btn-save,
 btn-mobile, btn-export, btn-copy-export`, palette buttons `add-<type>`, title input
-`newsletter-title`, export textarea `export-html`. Blocks in the preview carry
+`newsletter-title`, export textarea `export-html`. Rich-text editors are contenteditable
+divs (`rt-<field>`); the link tool is an inline row — select text, click 🔗, then use
+`rt-link-url-<field>` + `rt-link-apply-<field>` (no native prompt dialogs anywhere).
+For setting text content programmatically, prefer `NB.updateField(id, "html", "...")`
+with `<a href>` tags over driving the toolbar. Blocks in the preview carry
 `data-block-id` / `data-block-type`; each has ↑ ↓ ⧉ ✕ controls. Selecting a block opens
 its fields in the right-hand inspector (`data-field` attributes).
 

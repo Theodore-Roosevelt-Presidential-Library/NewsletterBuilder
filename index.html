@@ -77,6 +77,11 @@
   .rteditor:focus{outline:2px solid var(--accent);outline-offset:-1px}
   .rteditor ul,.rteditor ol{margin:6px 0;padding-left:22px}
   .rteditor a{color:var(--accent);font-weight:700}
+  .rtlink{display:none;gap:6px;margin:6px 0;align-items:center}
+  .rtlink.open{display:flex}
+  .rtlink input{flex:1;border:1px solid var(--line);border-radius:6px;padding:7px 8px;font-size:12px;font-family:inherit;min-width:0}
+  .rtlink button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap}
+  .rtlink button.apply{background:var(--accent);border-color:var(--accent);color:#fff}
   .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
   .seg button{flex:1;border:0;background:#fff;padding:7px 0;font-size:12px;font-family:inherit;cursor:pointer;color:var(--ink)}
   .seg button.on{background:var(--ink);color:#fff}
@@ -684,6 +689,12 @@ function richFld(id, label, value){
       <button type="button" data-cmd="insertUnorderedList" title="Bulleted list">•&nbsp;list</button>
       <button type="button" data-cmd="insertOrderedList" title="Numbered list">1.&nbsp;list</button>
     </div>
+    <div class="rtlink" data-rtlink="${id}">
+      <input type="url" placeholder="https://…" data-testid="rt-link-url-${id}">
+      <button type="button" class="apply" data-rtlink-act="apply" data-testid="rt-link-apply-${id}">Apply</button>
+      <button type="button" data-rtlink-act="unlink" title="Remove link from selection">Unlink</button>
+      <button type="button" data-rtlink-act="cancel">✕</button>
+    </div>
     <div class="rteditor" contenteditable="true" data-richfield="${id}" data-testid="rt-${id}">${sanitizeRich(value)}</div>
   </div>`;
 }
@@ -763,23 +774,75 @@ function saveRichEditor(ed){
   setDeep(b.props, ed.dataset.richfield, sanitizeRich(ed.innerHTML));
   commit({keepFocus:true});
 }
+
+/* Link tool: inline URL row (no native prompt — works for people AND for
+   Claude driving the UI via the Chrome extension). Selection is saved when
+   the row opens and restored when the link is applied. */
+let savedLinkRange = null;
+function rangeInEditor(ed){
+  const sel = window.getSelection();
+  if(!sel || sel.rangeCount===0) return null;
+  const r = sel.getRangeAt(0);
+  return ed.contains(r.commonAncestorContainer) ? r.cloneRange() : null;
+}
+function applyLinkToRange(ed, range, url){
+  const a = document.createElement("a");
+  a.setAttribute("href", url);
+  try { range.surroundContents(a); }
+  catch(err){ a.appendChild(range.extractContents()); range.insertNode(a); }
+  saveRichEditor(ed);
+}
+function unlinkRange(ed, range){
+  ed.querySelectorAll("a").forEach(a=>{
+    if(!range || range.intersectsNode(a)){
+      while(a.firstChild) a.parentNode.insertBefore(a.firstChild, a);
+      a.remove();
+    }
+  });
+  saveRichEditor(ed);
+}
+
 document.getElementById("inspector").addEventListener("click", e=>{
   const rtBtn = e.target.closest(".rtbar button");
   if(rtBtn){
     e.preventDefault();
-    const ed = rtBtn.closest(".field").querySelector("[data-richfield]");
-    ed.focus();
+    const field = rtBtn.closest(".field");
+    const ed = field.querySelector("[data-richfield]");
     const cmd = rtBtn.dataset.cmd;
     if(cmd==="link"){
-      const sel = window.getSelection();
-      if(!sel || sel.isCollapsed || !ed.contains(sel.anchorNode)){ toast("Select some text in the editor first, then click the link button."); return; }
-      const url = window.prompt("Link URL (https://…):", "https://");
-      if(url && /^https?:\/\//i.test(url)) document.execCommand("createLink", false, url);
-      else if(url) toast("Links must start with http:// or https://");
+      const row = field.querySelector(".rtlink");
+      savedLinkRange = rangeInEditor(ed);
+      if(!savedLinkRange || savedLinkRange.collapsed){ toast("Select some text in the editor first, then click the link button."); return; }
+      row.classList.add("open");
+      const inp = row.querySelector("input");
+      if(!inp.value) inp.value = "https://";
+      inp.focus();
     } else {
-      document.execCommand(cmd, false, null);
+      ed.focus();
+      if(document.execCommand) document.execCommand(cmd, false, null);
+      saveRichEditor(ed);
     }
-    saveRichEditor(ed);
+    return;
+  }
+  const rtAct = e.target.closest("[data-rtlink-act]");
+  if(rtAct){
+    e.preventDefault();
+    const field = rtAct.closest(".field");
+    const row = field.querySelector(".rtlink");
+    const ed = field.querySelector("[data-richfield]");
+    const act = rtAct.dataset.rtlinkAct;
+    if(act==="apply"){
+      const url = row.querySelector("input").value.trim();
+      if(!/^https?:\/\//i.test(url)){ toast("Links must start with http:// or https://"); return; }
+      if(!savedLinkRange){ toast("Select some text in the editor first."); return; }
+      applyLinkToRange(ed, savedLinkRange, url);
+      savedLinkRange = null; row.classList.remove("open"); row.querySelector("input").value = "";
+    } else if(act==="unlink"){
+      unlinkRange(ed, savedLinkRange);
+      savedLinkRange = null; row.classList.remove("open");
+    } else {
+      savedLinkRange = null; row.classList.remove("open");
+    }
     return;
   }
   const pick = e.target.closest("[data-pick]");
