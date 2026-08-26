@@ -46,6 +46,27 @@ Claude can also work entirely offline: generate the same email HTML by opening
 raw JSON (`{title, preheader, blocks}`) as well as any HTML file the tool saved/exported
 (state is embedded in an `<!--NEWSLETTER-BUILDER-DATA … -->` comment for round-trip editing).
 
+## Images: drag-drop and hosting in Constant Contact
+
+Matt can drag-drop / paste / file-pick images onto `header`, `hero`, `image`, and
+`columns` blocks. Dropped images are resized (max 1800px) and embedded as **data URLs**
+— they preview perfectly but are **not email-safe** (Gmail/Outlook strip them). Blocks
+with embedded images show an "unhosted image" badge, and the export modal lists them.
+
+**Claude should host these images.** With the Constant Contact connector available,
+the workflow is:
+
+1. `NB.listLocalImages()` → `[{id, type, field, filename, approxKB}]`
+2. `NB.getState()` → read the data URL at that block's `props[field]`
+3. Upload via the Constant Contact MCP tool `uploadMyLibraryFile`
+   (`filename`, `url` = the data URL — it accepts base64 data URLs directly);
+   the result includes `external_url`, a public CDN URL
+4. `NB.updateField(id, field, external_url)` — badge clears automatically
+5. Repeat until `NB.listLocalImages()` is empty, then export
+
+The same connector trick works for Header Studio: `await HDR.exportDataURL()` →
+`uploadMyLibraryFile` → paste `external_url` into the header block's `src`.
+
 ## UI hooks (if driving the visible UI instead)
 
 Toolbar buttons carry `data-testid`: `btn-new, btn-template, btn-load, btn-save,

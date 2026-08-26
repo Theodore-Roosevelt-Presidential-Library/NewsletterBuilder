@@ -60,6 +60,7 @@
   .ctrl button{background:none;border:0;color:#fff;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:4px}
   .ctrl button:hover{background:var(--accent)}
   .empty-note{border:2px dashed var(--line);border-radius:10px;padding:60px 20px;text-align:center;color:var(--muted);background:#fff}
+  .localbadge{position:absolute;top:4px;left:4px;background:#a04a2e;color:#fff;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:4px;z-index:4;pointer-events:none}
 
   /* inspector */
   .field{margin-bottom:12px}
@@ -130,6 +131,7 @@
   <div class="box">
     <header><h2>Email HTML — paste into Constant Contact</h2><button id="modal-close">✕</button></header>
     <div class="body">
+      <div id="export-warning"></div>
       <p class="hint" style="margin:0 0 10px">In Constant Contact: create a new email → choose <b>“Code your own”</b> (custom code email) → paste this HTML. Images must already be hosted (Constant Contact library, your DAM, or any public URL).</p>
       <textarea id="export-html" readonly data-testid="export-html"></textarea>
     </div>
@@ -332,6 +334,7 @@ function renderPreview(){
   const wraps = state.blocks.map(b=>{
     const inner = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border-collapse:collapse;">${renderBlockEmail(b)}</table>`;
     return `<div class="blockwrap${b.id===selectedId?" sel":""}" data-block-id="${b.id}" data-block-type="${b.type}">
+      ${hasLocalImg(b)?'<span class="localbadge">unhosted image</span>':''}
       <div class="ctrl">
         <button data-act="up" title="Move up">↑</button>
         <button data-act="down" title="Move down">↓</button>
@@ -342,6 +345,104 @@ function renderPreview(){
   canvas.innerHTML = `<div style="box-shadow:0 2px 14px rgba(0,0,0,.08);">${wraps}</div>`;
   renderStructure(); renderInspector();
 }
+
+/* ---------------- drag-drop / picked images ----------------
+   Dropped files are resized client-side and embedded as data URLs so the
+   preview works instantly. Data-URL images are NOT email-safe — they must be
+   replaced with hosted URLs (Constant Contact library) before sending; the
+   export modal flags them, and Claude can upload them via the CC connector. */
+const IMG_FIELDS = { header:["src"], hero:["src"], image:["src"], columns:["cols.0.src","cols.1.src"] };
+
+function readAndResize(file, cb){
+  const r = new FileReader();
+  r.onload = ()=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const MAX = 1800;
+      const scale = Math.min(1, MAX/img.width);
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width*scale); c.height = Math.round(img.height*scale);
+      const cx = c.getContext("2d");
+      if(!cx){ cb(r.result, file.name); return; }
+      cx.drawImage(img, 0, 0, c.width, c.height);
+      const isPng = /png|gif/i.test(file.type);
+      cb(c.toDataURL(isPng?"image/png":"image/jpeg", 0.85), file.name);
+    };
+    img.onerror = ()=> cb(r.result, file.name);
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+
+function setBlockImage(blockId, field, dataURL, filename){
+  const b = state.blocks.find(x=>x.id===blockId); if(!b) return;
+  setDeep(b.props, field, dataURL);
+  b.props._localFiles = b.props._localFiles || {};
+  b.props._localFiles[field] = filename || "image";
+  selectedId = blockId;
+  commit();
+  toast("Image added (preview only) — host it in Constant Contact's library before sending.");
+}
+
+function getDeep(obj, path){ return path.split(".").reduce((o,k)=>o&&o[k], obj); }
+
+function hasLocalImg(b){
+  return (IMG_FIELDS[b.type]||[]).some(f=>{
+    const v = getDeep(b.props, f);
+    return typeof v==="string" && v.startsWith("data:");
+  });
+}
+
+function listLocalImages(){
+  const out = [];
+  state.blocks.forEach(b=>{
+    (IMG_FIELDS[b.type]||[]).forEach(f=>{
+      const v = getDeep(b.props, f);
+      if(typeof v==="string" && v.startsWith("data:")){
+        out.push({id:b.id, type:b.type, field:f,
+          filename:(b.props._localFiles&&b.props._localFiles[f])||"image",
+          approxKB:Math.round(v.length*0.75/1024)});
+      }
+    });
+  });
+  return out;
+}
+
+canvas.addEventListener("dragover", e=>{
+  const wrap = e.target.closest && e.target.closest(".blockwrap");
+  if(wrap && IMG_FIELDS[wrap.dataset.blockType]){ e.preventDefault(); wrap.style.outline="2px solid var(--accent)"; wrap.style.outlineOffset="-2px"; }
+});
+canvas.addEventListener("dragleave", e=>{
+  const wrap = e.target.closest && e.target.closest(".blockwrap");
+  if(wrap) wrap.style.outline="";
+});
+canvas.addEventListener("drop", e=>{
+  const wrap = e.target.closest && e.target.closest(".blockwrap");
+  if(!wrap) return;
+  const fields = IMG_FIELDS[wrap.dataset.blockType];
+  if(!fields) return;
+  e.preventDefault(); wrap.style.outline="";
+  const file = [...(e.dataTransfer.files||[])].find(f=>f.type.startsWith("image/"));
+  if(!file) return;
+  let field = fields[0];
+  if(fields.length>1){ // columns: left/right half by drop position
+    const r = wrap.getBoundingClientRect();
+    field = (e.clientX - r.left) > r.width/2 ? fields[1] : fields[0];
+  }
+  readAndResize(file, (dataURL, name)=> setBlockImage(wrap.dataset.blockId, field, dataURL, name));
+});
+
+/* hidden file input used by inspector "choose file" buttons */
+const imgFileInput = document.createElement("input");
+imgFileInput.type = "file"; imgFileInput.accept = "image/*"; imgFileInput.style.display = "none";
+imgFileInput.dataset.testid = "img-file-input";
+document.body.appendChild(imgFileInput);
+let pendingPick = null;
+imgFileInput.addEventListener("change", ()=>{
+  const f = imgFileInput.files[0];
+  if(f && pendingPick) readAndResize(f, (dataURL,name)=> setBlockImage(pendingPick.id, pendingPick.field, dataURL, name));
+  imgFileInput.value = ""; pendingPick = null;
+});
 
 canvas.addEventListener("click", e=>{
   const ctl = e.target.closest(".ctrl button");
@@ -423,6 +524,20 @@ function fld(id, label, type, value, attrs){
   if(type==="textarea") return `<div class="field"><label for="f-${id}">${label}</label><textarea id="f-${id}" data-field="${id}" ${a}>${esc(value)}</textarea></div>`;
   return `<div class="field"><label for="f-${id}">${label}</label><input id="f-${id}" data-field="${id}" type="${type}" value="${escAttr(value)}" ${a}></div>`;
 }
+function imgFld(id, label, value, b){
+  const isLocal = typeof value==="string" && value.startsWith("data:");
+  const fname = isLocal && b && b.props._localFiles ? (b.props._localFiles[id]||"image") : "";
+  const shown = isLocal ? "" : value;
+  const ph = isLocal ? `embedded: ${fname} — paste hosted URL to replace` : "https://…";
+  return `<div class="field"><label for="f-${id}">${label}</label>
+    <input id="f-${id}" data-field="${id}" type="url" value="${escAttr(shown)}" placeholder="${escAttr(ph)}">
+    <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+      <button type="button" class="pickbtn" data-pick="${id}" style="border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px;font-size:12px;font-family:inherit;cursor:pointer">Choose file…</button>
+      ${isLocal?`<span style="font-size:11px;color:#a04a2e;font-weight:700">PREVIEW ONLY — needs hosting</span>`:""}
+    </div>
+    ${isLocal?`<p class="hint">Embedded images preview fine but get stripped by email apps. Upload to Constant Contact's library (or ask Claude to do it), then paste the hosted URL here.</p>`:""}
+  </div>`;
+}
 function alignSeg(id, value){
   return `<div class="field"><label>Alignment</label><div class="seg" data-seg="${id}">
     ${["left","center","right"].map(v=>`<button data-val="${v}" class="${v===value?"on":""}">${v}</button>`).join("")}</div></div>`;
@@ -439,11 +554,11 @@ function renderInspector(){
   switch(b.type){
     case "header":
       h+=`<p class="hint" style="margin:0 0 12px"><a href="header.html" target="_blank" style="color:var(--accent);font-weight:700;">Open Header Studio →</a> to generate this graphic (photo + wordmark plaque), upload the PNG to Constant Contact's library, then paste its URL below.</p>`;
-      h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL","url",p.href);
-      h+=`<p class="hint">Full-width banner (660px, 3:1). Export at 1800×600 or 1320×440 from Header Studio.</p>`; break;
+      h+=imgFld("src","Image URL",p.src,b)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL","url",p.href);
+      h+=`<p class="hint">Full-width banner (660px, 3:1). Export at 1800×600 or 1320×440 from Header Studio. You can also drop an image straight onto the block.</p>`; break;
     case "hero":
-      h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL (optional)","url",p.href);
-      h+=`<p class="hint">Full-width, edge to edge (660px). Use images at least 1320px wide for retina screens.</p>`; break;
+      h+=imgFld("src","Image URL",p.src,b)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL (optional)","url",p.href);
+      h+=`<p class="hint">Full-width, edge to edge (660px). Use images at least 1320px wide for retina screens. Drop an image straight onto the block, or paste a hosted URL.</p>`; break;
     case "heading":
       h+=fld("text","Heading text","text",p.text)+alignSeg("align",p.align); break;
     case "text":
@@ -453,13 +568,13 @@ function renderInspector(){
       h+=fld("label","Button label","text",p.label)+fld("href","Link URL","url",p.href);
       h+=`<p class="hint">Labels render in ALL CAPS, black square button — the Library's house style.</p>`; break;
     case "image":
-      h+=fld("src","Image URL","url",p.src)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL (optional)","url",p.href)+fld("caption","Caption (optional)","text",p.caption);
-      h+=`<p class="hint">Inset image (612px wide). Use images at least 1224px wide.</p>`; break;
+      h+=imgFld("src","Image URL",p.src,b)+fld("alt","Alt text","text",p.alt)+fld("href","Link URL (optional)","url",p.href)+fld("caption","Caption (optional)","text",p.caption);
+      h+=`<p class="hint">Inset image (612px wide). Use images at least 1224px wide. Drop an image straight onto the block, or paste a hosted URL.</p>`; break;
     case "columns":
       [0,1].forEach(i=>{
         const c=p.cols[i];
         h+=`<div class="colhead">${i===0?"Left":"Right"} column</div>`;
-        h+=fld(`cols.${i}.src`,"Image URL","url",c.src)+fld(`cols.${i}.heading`,"Heading","text",c.heading)+fld(`cols.${i}.text`,"Text","textarea",c.text,'style="min-height:70px"')+fld(`cols.${i}.label`,"Button label (optional)","text",c.label)+fld(`cols.${i}.href`,"Link URL","url",c.href);
+        h+=imgFld(`cols.${i}.src`,"Image URL",c.src,b)+fld(`cols.${i}.heading`,"Heading","text",c.heading)+fld(`cols.${i}.text`,"Text","textarea",c.text,'style="min-height:70px"')+fld(`cols.${i}.label`,"Button label (optional)","text",c.label)+fld(`cols.${i}.href`,"Link URL","url",c.href);
       }); break;
     case "spacer":
       h+=fld("height","Height (px)","number",p.height); break;
@@ -481,6 +596,8 @@ document.getElementById("inspector").addEventListener("input", e=>{
   commit({keepFocus:true});
 });
 document.getElementById("inspector").addEventListener("click", e=>{
+  const pick = e.target.closest("[data-pick]");
+  if(pick){ pendingPick = {id:selectedId, field:pick.dataset.pick}; imgFileInput.click(); return; }
   const btn = e.target.closest(".seg button"); if(!btn) return;
   const seg = btn.closest("[data-seg]");
   const b = state.blocks.find(x=>x.id===selectedId); if(!b) return;
@@ -517,6 +634,7 @@ function renderPreviewOnly(){
   const wraps = state.blocks.map(b=>{
     const inner = `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffffff;border-collapse:collapse;">${renderBlockEmail(b)}</table>`;
     return `<div class="blockwrap${b.id===selectedId?" sel":""}" data-block-id="${b.id}" data-block-type="${b.type}">
+      ${hasLocalImg(b)?'<span class="localbadge">unhosted image</span>':''}
       <div class="ctrl"><button data-act="up">↑</button><button data-act="down">↓</button><button data-act="dup">⧉</button><button data-act="del">✕</button></div>${inner}</div>`;
   }).join("");
   canvas.innerHTML = state.blocks.length ? `<div style="box-shadow:0 2px 14px rgba(0,0,0,.08);">${wraps}</div>` : canvas.innerHTML;
@@ -579,6 +697,13 @@ document.getElementById("file-input").addEventListener("change", e=>{
 const modal = document.getElementById("modal");
 document.getElementById("btn-export").addEventListener("click", ()=>{
   document.getElementById("export-html").value = buildEmailHTML({embedData:true});
+  const local = listLocalImages();
+  document.getElementById("export-warning").innerHTML = local.length ? `
+    <div style="background:#fdeeea;border:1px solid #e0a48c;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:12.5px;line-height:1.5;color:#7a2f1a">
+      <b>⚠ ${local.length} image${local.length>1?"s are":" is"} not hosted yet</b> — embedded previews get stripped by Gmail and Outlook.
+      Upload to Constant Contact's library and paste the hosted URL${local.length>1?"s":""} (or ask Claude to upload them for you):
+      <ul style="margin:6px 0 0;padding-left:18px">${local.map(l=>`<li>${esc(BLOCK_DEFS[l.type].name)} — ${esc(l.filename)} (~${l.approxKB} KB)</li>`).join("")}</ul>
+    </div>` : "";
   modal.classList.add("open");
 });
 document.getElementById("modal-close").addEventListener("click", ()=>modal.classList.remove("open"));
@@ -663,6 +788,10 @@ window.NB = {
   loadTemplate: () => { loadTemplate(); return true; },
   /** Import a previously exported/saved HTML string (rebuilds the editor). */
   importHTML: (html) => loadFromString(html),
+  /** Blocks whose images are embedded data URLs (not yet hosted). Returns [{id,type,field,filename,approxKB}].
+      Get the data URL via getState() → block.props[field]; after uploading to the Constant Contact
+      library, call updateField(id, field, hostedUrl) to swap it in. */
+  listLocalImages: () => listLocalImages(),
   setTitle: (t) => { state.title=t; titleInput.value=t; autosave(); return true; },
   setPreheader: (t) => { state.preheader=t; autosave(); return true; },
   blockTypes: Object.keys(BLOCK_DEFS)
