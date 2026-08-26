@@ -3,9 +3,13 @@
 A single-page newsletter builder for the Theodore Roosevelt Presidential Library, hosted at
 **https://newsletter.labs.trlibrary.com** (GitHub Pages, `index.html` is the entire app).
 
-It mirrors the Library's MailChimp design system: 660px white card on #f4f4f4, DM Sans
-31px bold centered headings, Helvetica Neue 16px body, square black uppercase buttons,
-2px #D1D1D1 dividers. Export produces Constant Contact-ready email HTML.
+It mirrors the Library's MailChimp layout system — 660px white card on #f4f4f4, centered
+headings, square black uppercase buttons, 2px #D1D1D1 dividers — with a type system of
+Google Fonts chosen as the closest free stand-ins for the TRPL brand fonts (brand-closer
+web-safe fallbacks for Gmail/Outlook): Oswald ≈ Dharma Gothic E for ALL-CAPS headings and
+buttons (falls back to Arial Narrow), Alegreya ≈ ITC Clearface for body copy (falls back
+to Georgia), Source Sans 3 ≈ Frutiger Next for captions and the footer (falls back to
+Verdana). Export produces Constant Contact-ready email HTML.
 
 ## How Claude should build a newsletter
 
