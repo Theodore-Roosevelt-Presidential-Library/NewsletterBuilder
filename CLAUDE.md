@@ -52,7 +52,12 @@ with the whitelisted tags above.
 The `footer` block props: `logoSrc` (white horizontal wordmark, default
 `https://newsletter.labs.trlibrary.com/assets/trpl-wordmark-horizontal-white.png`),
 `logoAlt, siteUrl, contactLabel, contactUrl` (default `https://www.trlibrary.com/contact`),
-`org, address` (default to Constant Contact account merge tags — see below), `note`.
+`org, address` (default to Constant Contact account merge tags — see below), `note`, and
+compliance-link labels `unsubLabel, updateLabel, webLabel` (rendered as links to CC's
+official `[[unsubscribe]]`, `[[updateLink]]`, `[[ViewAsWebPage]]` tags; empty label hides
+one). CC's own small system footer still gets appended at send time — it cannot be
+suppressed (compliance layouts can't be deleted, per CC) — but with these links in the
+branded footer the system one is redundant boilerplate.
 
 ## Constant Contact merge tags & hard requirements
 
@@ -68,6 +73,13 @@ preview shows the raw tags; the export keeps them for CC to fill at send time.
 Hard limits (CC rejects otherwise): total HTML ≤ 400 KB; must not contain the character
 sequences `[#`, `${`, or `<@`. The export modal checks all of these, and the builder's
 embedded round-trip state is base64-encoded to stay clear of them.
+
+**Footer address = CAN-SPAM sender address. Never invent or guess it.** Keep the default
+`[[account.*]]` merge tags so it pulls from the Constant Contact account settings. If a
+literal address is ever required, verify it first (trlibrary.com/contact lists the
+Library's Medora address — 3410 Chateau Road; the Foundation's mailing address is in
+Bismarck) and confirm with Matt which entity is sending. A wrong physical address in the
+footer is a compliance error, not a typo.
 
 Claude can also work entirely offline: generate the same email HTML by opening
 `index.html` locally, or hand Matt a state JSON — the builder's **Open file…** accepts

@@ -28,12 +28,19 @@ Block types and key props:
 - image   {src, alt, href, caption}   inset photo (>=1224px wide)
 - columns {cols:[{src, heading, text, label, href} x2]}   column images >=564px
 - divider {}   spacer {height}
-- footer  {logoSrc, logoAlt, siteUrl, contactLabel, contactUrl, org, address, note}
+- footer  {logoSrc, logoAlt, siteUrl, contactLabel, contactUrl, org, address, note,
+           unsubLabel, updateLabel, webLabel}  compliance links via CC tags
+           [[unsubscribe]] [[updateLink]] [[ViewAsWebPage]]; CC's own appended
+           system footer cannot be suppressed — don't try
 
 Constant Contact rules (handled/checked by the export): [[trackingImage]] is inserted
 automatically; personalization tags like [[FIRSTNAME OR "Friend"]] and account tags like
 [[account.OrganizationName]] pass through for CC to fill at send time; total HTML must be
 <= 400 KB and must not contain the sequences "[#", "${" or "<@".
+
+The footer address is the CAN-SPAM sender address: keep the [[account.*]] merge tags
+(they pull the verified address from the Constant Contact account). Never type a
+guessed or invented address.
 
 Images must be publicly hosted URLs (Constant Contact library or the Library's DAM).
 Data-URL images preview fine but are stripped by email clients — replace via

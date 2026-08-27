@@ -33,6 +33,8 @@ setTimeout(() => {
   check("trackingImage after body", /<body[^>]*>\s*\[\[trackingImage\]\]/.test(body));
   check("footer: logo, contact, merge tags", body.includes("trpl-wordmark-horizontal-white.png")
     && body.includes("trlibrary.com/contact") && body.includes("[[account.OrganizationName]]"));
+  check("footer: CC compliance links", body.includes('href="[[unsubscribe]]"')
+    && body.includes('href="[[updateLink]]"') && body.includes('href="[[ViewAsWebPage]]"'));
   check("no CC-forbidden sequences", !out.includes("[#") && !out.includes("${") && !out.includes("<@"));
 
   // round trip

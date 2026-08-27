@@ -290,7 +290,8 @@ function defaultProps(type){
         contactUrl:"https://www.trlibrary.com/contact",
         org:"[[account.OrganizationName]]",
         address:"[[account.AddressLine1]], [[account.City]], [[account.usState]] [[account.PostalCode]]",
-        note:"You are receiving this email because you signed up for updates from the Theodore Roosevelt Presidential Library."};
+        note:"You are receiving this email because you signed up for updates from the Theodore Roosevelt Presidential Library.",
+        unsubLabel:"Unsubscribe", updateLabel:"Update Preferences", webLabel:"View as Webpage"};
     default: return {};
   }
 }
@@ -418,7 +419,17 @@ function renderBlockEmail(b){
         ${contact?`<p style="margin:0 0 16px;color:#ffffff;font-family:${FONT_SMALL};font-size:14px;line-height:1.5;text-align:center;">${contact}</p>`:""}
         <p style="margin:0 0 6px;color:#ffffff;font-family:${FONT_SMALL};font-size:14px;font-weight:bold;line-height:1.4;text-align:center;">${esc(p.org)}</p>
         <p style="margin:0 0 14px;color:#cccccc;font-family:${FONT_SMALL};font-size:13px;line-height:1.5;text-align:center;">${esc(p.address)}</p>
-        <p style="margin:0;color:#999999;font-family:${FONT_SMALL};font-size:12px;line-height:1.5;text-align:center;">${esc(p.note)}</p>
+        <p style="margin:0 0 14px;color:#999999;font-family:${FONT_SMALL};font-size:12px;line-height:1.5;text-align:center;">${esc(p.note)}</p>
+        ${(()=>{ /* CC compliance links via official variable tags — CC still appends its own
+                    system footer (it can't be suppressed), but these keep the important
+                    links inside the branded footer. */
+          const links = [
+            p.unsubLabel  ? `<a href="[[unsubscribe]]" style="color:#cccccc;text-decoration:underline;">${esc(p.unsubLabel)}</a>` : "",
+            p.updateLabel ? `<a href="[[updateLink]]" style="color:#cccccc;text-decoration:underline;">${esc(p.updateLabel)}</a>` : "",
+            p.webLabel    ? `<a href="[[ViewAsWebPage]]" style="color:#cccccc;text-decoration:underline;">${esc(p.webLabel)}</a>` : ""
+          ].filter(Boolean).join("&nbsp;&nbsp;|&nbsp;&nbsp;");
+          return links ? `<p style="margin:0;color:#cccccc;font-family:${FONT_SMALL};font-size:12px;line-height:1.5;text-align:center;">${links}</p>` : "";
+        })()}
       </td></tr>`;
     }
 
@@ -753,8 +764,19 @@ function renderInspector(){
         +fld("contactUrl","Contact link URL","url",p.contactUrl)
         +fld("org","Organization line","text",p.org)
         +fld("address","Address line","text",p.address)
-        +fld("note","Small print","textarea",p.note,'style="min-height:70px"');
-      h+=`<p class="hint">The organization and address lines use Constant Contact merge tags like
+        +fld("note","Small print","textarea",p.note,'style="min-height:70px"')
+        +fld("unsubLabel","Unsubscribe link label","text",p.unsubLabel)
+        +fld("updateLabel","Update-preferences link label","text",p.updateLabel)
+        +fld("webLabel","View-as-webpage link label","text",p.webLabel);
+      h+=`<p class="hint">The three labels above render as Constant Contact's official compliance links
+        (<code>[[unsubscribe]]</code>, <code>[[updateLink]]</code>, <code>[[ViewAsWebPage]]</code>) — clear a label to hide
+        that link. Note: CC still appends its own small system footer at send time; it can't be suppressed,
+        but with these links in the branded footer it's just redundant boilerplate.</p>`;
+      h+=`<p class="hint"><b>This address is the CAN-SPAM sender address</b> — keep the merge tags so it always
+        pulls the physical address from the Constant Contact account settings, and verify that address is correct
+        in CC (Library in Medora vs. Foundation mailing address in Bismarck, depending on who's sending).
+        If you must type a literal address, verify it against trlibrary.com/contact first.</p>
+      <p class="hint">The organization and address lines use Constant Contact merge tags like
         <code>[[account.OrganizationName]]</code> and <code>[[account.AddressLine1]]</code> — they fill in from
         the CC account at send time (shown raw in the preview). Personalization tags like
         <code>[[FIRSTNAME OR "Friend"]]</code> work in any text block. The export automatically includes CC's
