@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- AI AGENTS: This page is scriptable via window.HDR (setImage, setOptions,
+     exportDataURL). Run HDR.help() or fetch /llms.txt for the guide. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -194,6 +196,9 @@
       <option value="600x200">600 × 200 — Canva template size</option>
     </select>
     <p class="hint">All sizes are the 3:1 email-header shape. Upload the PNG to Constant Contact's image library, then paste its URL into the newsletter builder's hero block.</p>
+    <p class="hint" style="margin-top:22px;padding-top:12px;border-top:1px solid var(--line)" id="agent-hint">
+      🤖 AI agents: scriptable via <code>window.HDR</code> — run <code>HDR.help()</code> or fetch <a href="llms.txt">/llms.txt</a>.
+    </p>
   </aside>
 
   <section class="stage">
@@ -406,7 +411,13 @@ window.HDR = {
   getOptions: () => ({plaque:state.plaque, mark:state.mark, scale:state.scale, yoff:state.yoff, zoom:state.zoom, panX:state.panX, panY:state.panY, dim:state.dim, outW:state.outW, outH:state.outH, hasImage:!!state.img}),
   /** PNG as data URL (throws if canvas is tainted by a non-CORS image). */
   exportDataURL: async () => { await draw(); return canvasEl.toDataURL("image/png"); },
-  palette: {plaque:PLAQUE_COLORS, mark:MARK_COLORS}
+  palette: {plaque:PLAQUE_COLORS, mark:MARK_COLORS},
+  /** Usage guide for AI agents (same content as /llms.txt). */
+  help: () => fetch("llms.txt").then(r=>r.text()).catch(()=>
+    "TRPL Header Studio automation API (window.HDR): await HDR.setImage(url) (CORS required for export);\n" +
+    "await HDR.setOptions({plaque,mark,scale:0.4-1.05,yoff:-50..50,zoom:1-3,panX,panY,dim:0-60,outW,outH});\n" +
+    "await HDR.exportDataURL() -> PNG data URL; HDR.getOptions(); HDR.palette.\n" +
+    "Plaque colors: #092A4D NightSky #1B4532 DarkForest #25282A DarkGray #000 #D1CCBD Sand #E7805D DeepOrange #8FC895 BrightForest #FFF 'none'.")
 };
 function syncControls(){
   const set=(id,v,fmt)=>{const el=document.getElementById(id);el.value=v;document.getElementById(id+"-val").textContent=fmt;};

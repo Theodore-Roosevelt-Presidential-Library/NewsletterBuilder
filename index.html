@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- AI AGENTS: This page is fully scriptable — no drag-and-drop needed.
+     Run NB.help() in the page context, or fetch /llms.txt for the complete
+     automation guide (window.NB API: setState, addBlock, exportHTML, ...). -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -205,6 +208,10 @@
     <div class="palette" id="palette"></div>
     <h3 class="panel">Structure</h3>
     <div id="structure"></div>
+    <p class="hint" style="margin-top:22px;padding-top:12px;border-top:1px solid var(--line)" id="agent-hint">
+      🤖 AI agents: this page is fully scriptable via the <code>window.NB</code> JavaScript API —
+      run <code>NB.help()</code> or fetch <a href="llms.txt">/llms.txt</a> for the guide. No drag-and-drop needed.
+    </p>
   </aside>
 
   <section class="stage">
@@ -1053,7 +1060,19 @@ window.NB = {
   listLocalImages: () => listLocalImages(),
   setTitle: (t) => { state.title=t; titleInput.value=t; autosave(); return true; },
   setPreheader: (t) => { state.preheader=t; autosave(); return true; },
-  blockTypes: Object.keys(BLOCK_DEFS)
+  blockTypes: Object.keys(BLOCK_DEFS),
+  /** Usage guide for AI agents (same content as /llms.txt). */
+  help: () => fetch("llms.txt").then(r=>r.text()).catch(()=>
+    "TRPL Newsletter Builder automation API (window.NB). No drag-and-drop — script everything.\n" +
+    "NB.setTitle(t); NB.setPreheader(t); NB.loadTemplate(); NB.setState({title,preheader,blocks:[{type,props}]});\n" +
+    "NB.addBlock(type,props?,index?)->id; NB.updateBlock(id,props); NB.updateField(id,'cols.0.heading',v);\n" +
+    "NB.moveBlock(id,i); NB.removeBlock(id); NB.getState(); NB.exportHTML(); NB.importHTML(html); NB.listLocalImages().\n" +
+    "Block types: header{src,alt,href} hero{src,alt,href} heading{text,align} text{html,align: tags b i u br ul ol li a}\n" +
+    "button{label,href} image{src,alt,href,caption} columns{cols:[{src,heading,text,label,href}x2]} divider spacer{height}\n" +
+    "footer{logoSrc,siteUrl,contactLabel,contactUrl,org,address,note}.\n" +
+    "Images must be hosted URLs (data URLs are preview-only). Export auto-inserts [[trackingImage]];\n" +
+    "CC merge tags like [[FIRSTNAME OR \"Friend\"]] and [[account.OrganizationName]] pass through.\n" +
+    "Limits: <=400KB; no '[#', '${'+'', '<@' sequences. Style: warm, vivid, short; ALL-CAPS button labels.")
 };
 
 /* ---------------- init ---------------- */

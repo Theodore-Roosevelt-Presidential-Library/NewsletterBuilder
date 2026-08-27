@@ -1,0 +1,63 @@
+# TRPL Newsletter Builder — guide for AI agents
+
+Single-page email newsletter builder for the Theodore Roosevelt Presidential Library
+(https://newsletter.labs.trlibrary.com). Builds Constant Contact-ready email HTML in the
+Library's brand system. Companion page: /header.html (Header Studio) generates branded
+3:1 header graphics.
+
+## How to build a newsletter (preferred: JavaScript API, not UI clicking)
+
+There is NO drag-and-drop. Everything is scriptable via `window.NB` on /index.html:
+
+- NB.setTitle(t), NB.setPreheader(t)
+- NB.loadTemplate() — standard TR Library layout to edit from
+- NB.setState({title, preheader, blocks:[{type, props}]}) — build from scratch
+- NB.addBlock(type, props?, index?) -> id; NB.updateBlock(id, props);
+  NB.updateField(id, "cols.0.heading", v); NB.moveBlock(id, i); NB.removeBlock(id)
+- NB.getState(); NB.exportHTML() — full Constant Contact-ready email HTML
+- NB.importHTML(html) — rebuild editor from previously exported/saved HTML
+- NB.listLocalImages() — blocks whose images are embedded data URLs (not yet hosted)
+- NB.help() returns this guide
+
+Block types and key props:
+- header  {src, alt, href}      3:1 top banner from Header Studio (660px wide)
+- hero    {src, alt, href}      full-bleed photo (>=1320px wide)
+- heading {text, align}         ALL-CAPS display heading (Oswald)
+- text    {html, align}         allowed tags: b i u br ul ol li a(href http/https)
+- button  {label, href}         label renders uppercase; keep it short (GET TICKETS)
+- image   {src, alt, href, caption}   inset photo (>=1224px wide)
+- columns {cols:[{src, heading, text, label, href} x2]}   column images >=564px
+- divider {}   spacer {height}
+- footer  {logoSrc, logoAlt, siteUrl, contactLabel, contactUrl, org, address, note}
+
+Constant Contact rules (handled/checked by the export): [[trackingImage]] is inserted
+automatically; personalization tags like [[FIRSTNAME OR "Friend"]] and account tags like
+[[account.OrganizationName]] pass through for CC to fill at send time; total HTML must be
+<= 400 KB and must not contain the sequences "[#", "${" or "<@".
+
+Images must be publicly hosted URLs (Constant Contact library or the Library's DAM).
+Data-URL images preview fine but are stripped by email clients — replace via
+NB.updateField(id, field, hostedUrl) before export.
+
+## Header Studio (/header.html): window.HDR
+
+- await HDR.setImage(url)  (URL must allow CORS; local drag-drop always works)
+- await HDR.setOptions({plaque, mark, scale, yoff, zoom, panX, panY, dim, outW, outH})
+- await HDR.exportDataURL() -> PNG data URL; HDR.getOptions(); HDR.palette; HDR.help()
+- Brand plaque colors: #092A4D Night Sky, #1B4532 Dark Forest, #25282A Dark Gray,
+  #000000, #D1CCBD Sand, #E7805D Deep Orange, #8FC895 Bright Forest, #FFFFFF, "none"
+
+## House style
+
+Friendly, plain, vivid — a knowledgeable park ranger, not a professor. Lead with story.
+Short paragraphs, one idea per section, one clear CTA. TR quotes must be verbatim and
+verified; if unsure, flag for verification rather than guessing. Avoid partisan framing.
+
+## UI hooks (only if driving the visible UI)
+
+data-testid attributes: btn-new, btn-template, btn-load, btn-save, btn-mobile,
+btn-export, btn-copy-export, add-<blocktype>, newsletter-title, export-html.
+Rich text editors: contenteditable divs rt-<field>; link tool is an inline row
+(rt-link-url-<field>, rt-link-apply-<field>) — no native dialogs.
+Header Studio: btn-download, btn-copy, drop, url-input, url-go, zoom, dim, scale,
+yoff, size, btn-back.
