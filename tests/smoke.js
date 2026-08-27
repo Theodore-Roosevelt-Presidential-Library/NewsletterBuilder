@@ -35,6 +35,13 @@ setTimeout(() => {
     && body.includes("trlibrary.com/contact") && body.includes("[[account.OrganizationName]]"));
   check("footer: CC compliance links", body.includes('href="[[unsubscribe]]"')
     && body.includes('href="[[updateLink]]"') && body.includes('href="[[ViewAsWebPage]]"'));
+  check("update-prefs more prominent than unsubscribe", (() => {
+    const up = body.indexOf('href="[[updateLink]]"'), un = body.indexOf('href="[[unsubscribe]]"');
+    const upTag = body.slice(body.lastIndexOf("<a", up), body.indexOf(">", up));
+    const unTag = body.slice(body.lastIndexOf("<a", un), body.indexOf(">", un));
+    return up < un && upTag.includes("font-weight:bold") && upTag.includes("#ffffff")
+      && !unTag.includes("font-weight:bold") && unTag.includes("#aaaaaa");
+  })());
   check("no CC-forbidden sequences", !out.includes("[#") && !out.includes("${") && !out.includes("<@"));
 
   // round trip

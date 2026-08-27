@@ -422,13 +422,15 @@ function renderBlockEmail(b){
         <p style="margin:0 0 14px;color:#999999;font-family:${FONT_SMALL};font-size:12px;line-height:1.5;text-align:center;">${esc(p.note)}</p>
         ${(()=>{ /* CC compliance links via official variable tags — CC still appends its own
                     system footer (it can't be suppressed), but these keep the important
-                    links inside the branded footer. */
-          const links = [
-            p.unsubLabel  ? `<a href="[[unsubscribe]]" style="color:#cccccc;text-decoration:underline;">${esc(p.unsubLabel)}</a>` : "",
-            p.updateLabel ? `<a href="[[updateLink]]" style="color:#cccccc;text-decoration:underline;">${esc(p.updateLabel)}</a>` : "",
-            p.webLabel    ? `<a href="[[ViewAsWebPage]]" style="color:#cccccc;text-decoration:underline;">${esc(p.webLabel)}</a>` : ""
+                    links inside the branded footer. Update Preferences is deliberately
+                    more prominent than Unsubscribe (retention-friendly, still compliant —
+                    unsubscribe stays clearly visible). */
+          const update = p.updateLabel ? `<p style="margin:0 0 10px;font-family:${FONT_SMALL};font-size:14px;line-height:1.5;text-align:center;"><a href="[[updateLink]]" style="color:#ffffff;font-weight:bold;text-decoration:underline;">${esc(p.updateLabel)}</a></p>` : "";
+          const quiet = [
+            p.unsubLabel ? `<a href="[[unsubscribe]]" style="color:#aaaaaa;text-decoration:underline;">${esc(p.unsubLabel)}</a>` : "",
+            p.webLabel   ? `<a href="[[ViewAsWebPage]]" style="color:#aaaaaa;text-decoration:underline;">${esc(p.webLabel)}</a>` : ""
           ].filter(Boolean).join("&nbsp;&nbsp;|&nbsp;&nbsp;");
-          return links ? `<p style="margin:0;color:#cccccc;font-family:${FONT_SMALL};font-size:12px;line-height:1.5;text-align:center;">${links}</p>` : "";
+          return update + (quiet ? `<p style="margin:0;color:#aaaaaa;font-family:${FONT_SMALL};font-size:11px;line-height:1.5;text-align:center;">${quiet}</p>` : "");
         })()}
       </td></tr>`;
     }
@@ -770,8 +772,10 @@ function renderInspector(){
         +fld("webLabel","View-as-webpage link label","text",p.webLabel);
       h+=`<p class="hint">The three labels above render as Constant Contact's official compliance links
         (<code>[[unsubscribe]]</code>, <code>[[updateLink]]</code>, <code>[[ViewAsWebPage]]</code>) — clear a label to hide
-        that link. Note: CC still appends its own small system footer at send time; it can't be suppressed,
-        but with these links in the branded footer it's just redundant boilerplate.</p>`;
+        that link. Update Preferences renders prominent (white, bold); Unsubscribe and View as Webpage render
+        small and muted below it — visible for compliance, but preferences-first. Note: CC still appends its own
+        small system footer at send time; it can't be suppressed, but with these links in the branded footer
+        it's just redundant boilerplate.</p>`;
       h+=`<p class="hint"><b>This address is the CAN-SPAM sender address</b> — keep the merge tags so it always
         pulls the physical address from the Constant Contact account settings, and verify that address is correct
         in CC (Library in Medora vs. Foundation mailing address in Bismarck, depending on who's sending).
